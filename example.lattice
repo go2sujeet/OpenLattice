@@ -1,0 +1,53 @@
+entity "Order" {
+  fields = {
+    id     = uuid
+    amount = int
+    status = string
+  }
+}
+
+entity "Product" {
+  fields = {
+    id    = uuid
+    name  = string
+    price = float
+  }
+}
+
+api "CreateOrder" {
+  method = POST
+  path   = "/orders"
+  input  = Order
+  output = Order
+}
+
+api "GetOrder" {
+  method = GET
+  path   = "/orders/{id}"
+  output = Order
+}
+
+api "ListOrders" {
+  method = GET
+  path   = "/orders"
+  output = Order
+}
+
+event "OrderCreated" {
+  payload = {
+    order_id = uuid
+    amount   = int
+  }
+}
+
+workflow "Checkout" {
+  steps = [
+    "validate_order",
+    "charge_customer",
+    "publish_order_created"
+  ]
+}
+
+queue "email_notifications" {
+  retries = 3
+}

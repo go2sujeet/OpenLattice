@@ -1,2 +1,6 @@
 .history/
 .specstory/
+.venv/
+__pycache__/
+*.pyc
+generated/*.py
