@@ -1,53 +1,59 @@
-entity "Order" {
+# OpenLattice example spec — TF-style resource blocks
+
+resource "lattice_entity" "order" {
+  name = "Order"
   fields = {
-    id     = uuid
-    amount = int
-    status = string
+    id     = "uuid"
+    amount = "int"
+    status = "string"
   }
 }
 
-entity "Product" {
+resource "lattice_entity" "product" {
+  name = "Product"
   fields = {
-    id    = uuid
-    name  = string
-    price = float
+    id    = "uuid"
+    name  = "string"
+    price = "float"
   }
 }
 
-api "CreateOrder" {
-  method = POST
+resource "lattice_api" "create_order" {
+  name   = "CreateOrder"
+  method = "POST"
   path   = "/orders"
-  input  = Order
-  output = Order
+  input  = lattice_entity.order.name
+  output = lattice_entity.order.name
 }
 
-api "GetOrder" {
-  method = GET
+resource "lattice_api" "get_order" {
+  name   = "GetOrder"
+  method = "GET"
   path   = "/orders/{id}"
-  output = Order
+  output = lattice_entity.order.name
 }
 
-api "ListOrders" {
-  method = GET
+resource "lattice_api" "list_orders" {
+  name   = "ListOrders"
+  method = "GET"
   path   = "/orders"
-  output = Order
+  output = lattice_entity.order.name
 }
 
-event "OrderCreated" {
+resource "lattice_event" "order_created" {
+  name = "OrderCreated"
   payload = {
-    order_id = uuid
-    amount   = int
+    order_id = "uuid"
+    amount   = "int"
   }
 }
 
-workflow "Checkout" {
-  steps = [
-    "validate_order",
-    "charge_customer",
-    "publish_order_created"
-  ]
+resource "lattice_workflow" "checkout" {
+  name  = "Checkout"
+  steps = ["validate_order", "charge_customer", "publish_order_created"]
 }
 
-queue "email_notifications" {
+resource "lattice_queue" "email_notifications" {
+  name    = "email_notifications"
   retries = 3
 }

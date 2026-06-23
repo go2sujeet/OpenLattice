@@ -1,100 +1,107 @@
 # E-Commerce platform spec
-# Demonstrates: multi-entity, CRUD APIs, events, workflow, queue
 
-entity "User" {
+resource "lattice_entity" "user" {
+  name = "User"
   fields = {
-    id    = uuid
-    email = string
-    name  = string
+    id    = "uuid"
+    email = "string"
+    name  = "string"
   }
 }
 
-entity "Product" {
+resource "lattice_entity" "product" {
+  name = "Product"
   fields = {
-    id    = uuid
-    name  = string
-    price = float
-    stock = int
+    id    = "uuid"
+    name  = "string"
+    price = "float"
+    stock = "int"
   }
 }
 
-entity "Order" {
+resource "lattice_entity" "order" {
+  name = "Order"
   fields = {
-    id         = uuid
-    user_id    = uuid
-    total      = float
-    status     = string
-    created_at = datetime
+    id         = "uuid"
+    user_id    = "uuid"
+    total      = "float"
+    status     = "string"
+    created_at = "datetime"
   }
 }
 
-api "CreateOrder" {
-  method = POST
+resource "lattice_api" "create_order" {
+  name   = "CreateOrder"
+  method = "POST"
   path   = "/orders"
-  input  = Order
-  output = Order
+  input  = lattice_entity.order.name
+  output = lattice_entity.order.name
 }
 
-api "GetOrder" {
-  method = GET
+resource "lattice_api" "get_order" {
+  name   = "GetOrder"
+  method = "GET"
   path   = "/orders/{id}"
-  output = Order
+  output = lattice_entity.order.name
 }
 
-api "ListOrders" {
-  method = GET
+resource "lattice_api" "list_orders" {
+  name   = "ListOrders"
+  method = "GET"
   path   = "/orders"
-  output = Order
+  output = lattice_entity.order.name
 }
 
-api "CreateProduct" {
-  method = POST
+resource "lattice_api" "create_product" {
+  name   = "CreateProduct"
+  method = "POST"
   path   = "/products"
-  input  = Product
-  output = Product
+  input  = lattice_entity.product.name
+  output = lattice_entity.product.name
 }
 
-api "GetProduct" {
-  method = GET
+resource "lattice_api" "get_product" {
+  name   = "GetProduct"
+  method = "GET"
   path   = "/products/{id}"
-  output = Product
+  output = lattice_entity.product.name
 }
 
-api "GetUser" {
-  method = GET
+resource "lattice_api" "get_user" {
+  name   = "GetUser"
+  method = "GET"
   path   = "/users/{id}"
-  output = User
+  output = lattice_entity.user.name
 }
 
-event "OrderCreated" {
+resource "lattice_event" "order_created" {
+  name = "OrderCreated"
   payload = {
-    order_id = uuid
-    user_id  = uuid
-    total    = float
+    order_id = "uuid"
+    user_id  = "uuid"
+    total    = "float"
   }
 }
 
-event "OrderShipped" {
+resource "lattice_event" "order_shipped" {
+  name = "OrderShipped"
   payload = {
-    order_id   = uuid
-    shipped_at = datetime
+    order_id   = "uuid"
+    shipped_at = "datetime"
   }
 }
 
-workflow "Checkout" {
-  steps = [
-    "validate_cart",
-    "reserve_inventory",
-    "charge_payment",
-    "create_order",
-    "publish_order_created"
-  ]
+resource "lattice_workflow" "checkout" {
+  name  = "Checkout"
+  steps = ["validate_cart", "reserve_inventory", "charge_payment", "create_order", "publish_order_created"]
 }
 
-queue "email_notifications" {
+resource "lattice_queue" "email_notifications" {
+  name    = "email_notifications"
   retries = 5
 }
 
-queue "inventory_updates" {
+resource "lattice_queue" "inventory_updates" {
+  name    = "inventory_updates"
   retries = 3
 }

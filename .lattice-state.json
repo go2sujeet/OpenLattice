@@ -1,0 +1,167 @@
+{
+  "version": "1",
+  "serial": 1,
+  "lineage": "18327ab0-d19c-43e1-84e6-334c405117fe",
+  "resources": [
+    {
+      "type": "lattice_entity",
+      "label": "author",
+      "attributes": {
+        "name": "Author",
+        "fields": {
+          "id": "uuid",
+          "username": "string",
+          "email": "string",
+          "bio": "string"
+        }
+      },
+      "spec_hash": "sha256:5e8053930b00888e3cb2499fe3f97304852a24497c56ce2ea7d01feed1b11a7f"
+    },
+    {
+      "type": "lattice_entity",
+      "label": "post",
+      "attributes": {
+        "name": "Post",
+        "fields": {
+          "id": "uuid",
+          "author_id": "uuid",
+          "title": "string",
+          "content": "string",
+          "status": "string",
+          "published_at": "datetime"
+        }
+      },
+      "spec_hash": "sha256:0e3516e9c73144b83c851b25f8e4ff3f0f42c30c194470e21153aeb47245b055"
+    },
+    {
+      "type": "lattice_entity",
+      "label": "comment",
+      "attributes": {
+        "name": "Comment",
+        "fields": {
+          "id": "uuid",
+          "post_id": "uuid",
+          "author_id": "uuid",
+          "body": "string",
+          "created_at": "datetime"
+        }
+      },
+      "spec_hash": "sha256:c1e8e74e36a6ddb3d931b74af57ef55afc26d3561c4ed2721d4ef69b10caece7"
+    },
+    {
+      "type": "lattice_api",
+      "label": "create_post",
+      "attributes": {
+        "name": "CreatePost",
+        "method": "POST",
+        "path": "/posts",
+        "input": "Post",
+        "output": "Post"
+      },
+      "spec_hash": "sha256:f8ba96fc3dcd0d61fc50e21b0486f6f2e46f988a180728cd39a787b1b284ed2a"
+    },
+    {
+      "type": "lattice_api",
+      "label": "get_post",
+      "attributes": {
+        "name": "GetPost",
+        "method": "GET",
+        "path": "/posts/{id}",
+        "output": "Post"
+      },
+      "spec_hash": "sha256:0a018a17690b8b258184d39fd7c6a6505c5e0586192d7df1f61d659d02bf46f3"
+    },
+    {
+      "type": "lattice_api",
+      "label": "list_posts",
+      "attributes": {
+        "name": "ListPosts",
+        "method": "GET",
+        "path": "/posts",
+        "output": "Post"
+      },
+      "spec_hash": "sha256:5a2b01b328a7b7af83dd71cc14486e58f589a401900b3746cecfd7f2b6630e36"
+    },
+    {
+      "type": "lattice_api",
+      "label": "update_post",
+      "attributes": {
+        "name": "UpdatePost",
+        "method": "PUT",
+        "path": "/posts/{id}",
+        "input": "Post",
+        "output": "Post"
+      },
+      "spec_hash": "sha256:cd596fd5528c8c2fef2f0250d3d566eba23d37fab541805b2f8f174d352307ef"
+    },
+    {
+      "type": "lattice_api",
+      "label": "delete_post",
+      "attributes": {
+        "name": "DeletePost",
+        "method": "DELETE",
+        "path": "/posts/{id}"
+      },
+      "spec_hash": "sha256:37019061ced2b977a2317fe8fa5f5b519d1aa2da433db397e1844577272d1d5b"
+    },
+    {
+      "type": "lattice_api",
+      "label": "create_comment",
+      "attributes": {
+        "name": "CreateComment",
+        "method": "POST",
+        "path": "/posts/{id}/comments",
+        "input": "Comment",
+        "output": "Comment"
+      },
+      "spec_hash": "sha256:6153e26aac9f85e8cc8ed8e67ef546c008362765e1115e5ad0cee3dd2159cf40"
+    },
+    {
+      "type": "lattice_api",
+      "label": "get_author",
+      "attributes": {
+        "name": "GetAuthor",
+        "method": "GET",
+        "path": "/authors/{id}",
+        "output": "Author"
+      },
+      "spec_hash": "sha256:4b860753154b61d514cb9962566a4a97eae903be7d3fb5006735b2d2ad4a352d"
+    },
+    {
+      "type": "lattice_event",
+      "label": "post_published",
+      "attributes": {
+        "name": "PostPublished",
+        "payload": {
+          "post_id": "uuid",
+          "author_id": "uuid",
+          "title": "string"
+        }
+      },
+      "spec_hash": "sha256:6c9497fbee3376ce0ef60740041157db9118d49d80bf287b028582f7fcfae0d0"
+    },
+    {
+      "type": "lattice_workflow",
+      "label": "publish_post",
+      "attributes": {
+        "name": "PublishPost",
+        "steps": [
+          "validate_content",
+          "run_moderation",
+          "set_published_status",
+          "notify_subscribers"
+        ]
+      },
+      "spec_hash": "sha256:89d55f68d2fe9f1f0cac562507671ecd2181fca4299d85e6ea72450663ded8ef"
+    },
+    {
+      "type": "lattice_queue",
+      "label": "subscriber_notifications",
+      "attributes": {
+        "name": "subscriber_notifications",
+        "retries": 3
+      },
+      "spec_hash": "sha256:1a1c8d860499490e5234bbfa059f1ff073e2010f80207b5af5927a5da6b1337f"
+    }
+  ]
+}

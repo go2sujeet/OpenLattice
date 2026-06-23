@@ -1,98 +1,104 @@
 # Blog platform spec
-# Demonstrates: relationships, content model, publishing workflow
 
-entity "Author" {
+resource "lattice_entity" "author" {
+  name = "Author"
   fields = {
-    id       = uuid
-    username = string
-    email    = string
-    bio      = string
+    id       = "uuid"
+    username = "string"
+    email    = "string"
+    bio      = "string"
   }
 }
 
-entity "Post" {
+resource "lattice_entity" "post" {
+  name = "Post"
   fields = {
-    id           = uuid
-    author_id    = uuid
-    title        = string
-    content      = string
-    status       = string
-    published_at = datetime
+    id           = "uuid"
+    author_id    = "uuid"
+    title        = "string"
+    content      = "string"
+    status       = "string"
+    published_at = "datetime"
   }
 }
 
-entity "Comment" {
+resource "lattice_entity" "comment" {
+  name = "Comment"
   fields = {
-    id         = uuid
-    post_id    = uuid
-    author_id  = uuid
-    body       = string
-    created_at = datetime
+    id         = "uuid"
+    post_id    = "uuid"
+    author_id  = "uuid"
+    body       = "string"
+    created_at = "datetime"
   }
 }
 
-api "CreatePost" {
-  method = POST
+resource "lattice_api" "create_post" {
+  name   = "CreatePost"
+  method = "POST"
   path   = "/posts"
-  input  = Post
-  output = Post
+  input  = lattice_entity.post.name
+  output = lattice_entity.post.name
 }
 
-api "GetPost" {
-  method = GET
+resource "lattice_api" "get_post" {
+  name   = "GetPost"
+  method = "GET"
   path   = "/posts/{id}"
-  output = Post
+  output = lattice_entity.post.name
 }
 
-api "ListPosts" {
-  method = GET
+resource "lattice_api" "list_posts" {
+  name   = "ListPosts"
+  method = "GET"
   path   = "/posts"
-  output = Post
+  output = lattice_entity.post.name
 }
 
-api "UpdatePost" {
-  method = PUT
+resource "lattice_api" "update_post" {
+  name   = "UpdatePost"
+  method = "PUT"
   path   = "/posts/{id}"
-  input  = Post
-  output = Post
+  input  = lattice_entity.post.name
+  output = lattice_entity.post.name
 }
 
-api "DeletePost" {
-  method = DELETE
+resource "lattice_api" "delete_post" {
+  name   = "DeletePost"
+  method = "DELETE"
   path   = "/posts/{id}"
 }
 
-api "CreateComment" {
-  method = POST
+resource "lattice_api" "create_comment" {
+  name   = "CreateComment"
+  method = "POST"
   path   = "/posts/{id}/comments"
-  input  = Comment
-  output = Comment
+  input  = lattice_entity.comment.name
+  output = lattice_entity.comment.name
 }
 
-api "GetAuthor" {
-  method = GET
+resource "lattice_api" "get_author" {
+  name   = "GetAuthor"
+  method = "GET"
   path   = "/authors/{id}"
-  output = Author
+  output = lattice_entity.author.name
 }
 
-event "PostPublished" {
+resource "lattice_event" "post_published" {
+  name = "PostPublished"
   payload = {
-    post_id   = uuid
-    author_id = uuid
-    title     = string
+    post_id   = "uuid"
+    author_id = "uuid"
+    title     = "string"
   }
 }
 
-workflow "PublishPost" {
-  steps = [
-    "validate_content",
-    "run_moderation",
-    "set_published_status",
-    "publish_post_event",
-    "notify_subscribers"
-  ]
+resource "lattice_workflow" "publish_post" {
+  name  = "PublishPost"
+  steps = ["validate_content", "run_moderation", "set_published_status", "notify_subscribers"]
 }
 
-queue "subscriber_notifications" {
+resource "lattice_queue" "subscriber_notifications" {
+  name    = "subscriber_notifications"
   retries = 3
 }
