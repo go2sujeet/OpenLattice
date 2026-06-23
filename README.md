@@ -2,9 +2,10 @@
 
 **Declarative application specifications. Describe the system. Generate the implementation.**
 
+[![PyPI](https://img.shields.io/pypi/v/openlattice.svg)](https://pypi.org/project/openlattice/)
+[![CI](https://github.com/go2sujeet/OpenLattice/actions/workflows/ci.yml/badge.svg)](https://github.com/go2sujeet/OpenLattice/actions/workflows/ci.yml)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Status: Alpha](https://img.shields.io/badge/status-alpha-orange.svg)]()
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/go2sujeet/OpenLattice)
 
 ---

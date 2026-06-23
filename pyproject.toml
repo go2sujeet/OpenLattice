@@ -1,7 +1,20 @@
 [project]
 name = "openlattice"
 version = "0.1.0"
-description = "Declarative application specification compiler"
+description = "Declarative application specification compiler — Terraform-style DSL for FastAPI and SQLAlchemy"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Sujeet Buddiga", email = "sujeet4work@gmail.com" }]
+keywords = ["fastapi", "sqlalchemy", "code-generation", "dsl", "terraform"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Code Generators",
+]
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115.0",
@@ -11,6 +24,11 @@ dependencies = [
     "pydantic>=2.0.0",
     "rich>=13.0.0",
 ]
+
+[project.urls]
+Homepage = "https://go2sujeet.github.io/OpenLattice"
+Repository = "https://github.com/go2sujeet/OpenLattice"
+Issues = "https://github.com/go2sujeet/OpenLattice/issues"
 
 [project.scripts]
 openlattice = "openlattice.cli:cli"
