@@ -1,15 +1,66 @@
-import sys
-from pathlib import Path
-
 import click
+from pathlib import Path
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
 
 from openlattice.parser import parse_file, ParseError
-from openlattice.generators import fastapi_gen, sqlalchemy_gen
+from openlattice.state import (
+    load_state, save_state, diff_spec_against_state,
+    build_new_state, _spec_resources, compute_spec_hash,
+)
+from openlattice.generators.fastapi_gen import generate as gen_fastapi
+from openlattice.generators.sqlalchemy_gen import generate as gen_sqlalchemy
 
 console = Console()
+STATE_FILE = ".lattice-state.json"
+
+
+def _render_plan(diff, spec, state) -> Text:
+    t = Text()
+    current = {(r.type, r.label): r for r in state.resources}
+    all_res = {(rt, lb): attrs for rt, lb, attrs in _spec_resources(spec)}
+
+    for (rt, lb), attrs in all_res.items():
+        ref = f"{rt}.{lb}"
+        if ref in diff.to_add:
+            t.append(f"\n  + resource \"{rt}\" \"{lb}\"", style="green")
+            t.append("  # will be created\n", style="dim")
+            for k, v in attrs.items():
+                if isinstance(v, dict):
+                    fields_str = ", ".join(f"{fk}: {fv}" for fk, fv in v.items())
+                    t.append(f"      {k} = {{{fields_str}}}\n", style="green")
+                elif isinstance(v, list):
+                    t.append(f"      {k} = {v}\n", style="green")
+                else:
+                    t.append(f"      {k} = \"{v}\"\n", style="green")
+        elif ref in diff.to_change:
+            old = current[(rt, lb)].attributes
+            t.append(f"\n  ~ resource \"{rt}\" \"{lb}\"", style="yellow")
+            t.append("  # will be updated\n", style="dim")
+            for k in set(list(old.keys()) + list(attrs.keys())):
+                oval = old.get(k)
+                nval = attrs.get(k)
+                if oval != nval:
+                    t.append(f"    ~ {k} = ", style="yellow")
+                    t.append(f"{oval!r}", style="red")
+                    t.append(" → ", style="dim")
+                    t.append(f"{nval!r}\n", style="green")
+
+    for ref in diff.to_destroy:
+        rt, lb = ref.split(".", 1)
+        t.append(f"\n  - resource \"{rt}\" \"{lb}\"", style="red")
+        t.append("  # will be destroyed\n", style="dim")
+
+    nadd = len(diff.to_add)
+    nchange = len(diff.to_change)
+    ndestroy = len(diff.to_destroy)
+    t.append(f"\nPlan: {nadd} to add, {nchange} to change, {ndestroy} to destroy.\n", style="bold")
+
+    if nadd + nchange + ndestroy == 0:
+        t.append("\nNo changes. Infrastructure is up-to-date.\n", style="bold green")
+
+    return t
 
 
 @click.group()
@@ -21,66 +72,70 @@ def cli():
 @cli.command()
 @click.argument("spec_file", type=click.Path(exists=True))
 def plan(spec_file: str):
-    """Show what will be generated from SPEC_FILE."""
+    """Show execution plan: what will be added, changed, or destroyed."""
     try:
         spec = parse_file(spec_file)
     except ParseError as e:
-        console.print(f"[bold red]Parse error:[/bold red] {e}")
-        sys.exit(1)
+        console.print(f"[red]Parse error:[/red] {e}")
+        raise SystemExit(1)
 
-    body = Text()
+    state = load_state(STATE_FILE)
+    diff = diff_spec_against_state(spec, state)
 
-    body.append("  Resources:\n")
-    for entity in spec.entities:
-        count = len(entity.fields)
-        body.append(f"    + Entity:   {entity.name:<20} ({count} field{'s' if count != 1 else ''})\n", style="green")
-    for api in spec.apis:
-        body.append(f"    + API:      {api.name:<20} {api.method:<6} {api.path}\n", style="green")
-    for event in spec.events:
-        body.append(f"    + Event:    {event.name}\n", style="green")
-    for workflow in spec.workflows:
-        count = len(workflow.steps)
-        body.append(f"    + Workflow: {workflow.name:<20} ({count} step{'s' if count != 1 else ''})\n", style="green")
-    for queue in spec.queues:
-        body.append(f"    + Queue:    {queue.name:<20} retries={queue.retries}\n", style="green")
+    content = Text()
+    content.append(f"Spec: {spec_file}\n\n", style="dim")
+    content.append(_render_plan(diff, spec, state))
+    content.append("\n  Will generate:\n", style="dim")
+    content.append("    → generated/main.py        FastAPI app + routes\n", style="cyan")
+    content.append("    → generated/models.py      SQLAlchemy models\n", style="cyan")
+    if diff.to_add or diff.to_change or diff.to_destroy:
+        content.append(f"\n  Run `openlattice apply {spec_file}` to perform these actions.", style="dim")
 
-    body.append("\n  Will generate:\n")
-    body.append("    → generated/main.py        FastAPI app + routes\n", style="cyan")
-    body.append("    → generated/models.py      SQLAlchemy models\n", style="cyan")
-
-    body.append("\n  Run `openlattice apply <file>` to materialize.")
-
-    console.print(Panel(body, title="OpenLattice Plan", expand=False))
+    console.print(Panel(content, title="OpenLattice Plan", border_style="blue"))
 
 
 @cli.command()
 @click.argument("spec_file", type=click.Path(exists=True))
 def apply(spec_file: str):
-    """Generate application artifacts from SPEC_FILE."""
-    spec_path = Path(spec_file)
-
-    console.print(f"Applying OpenLattice spec: [bold]{spec_path.name}[/bold]\n")
-
+    """Apply spec: generate files and update state."""
     try:
         spec = parse_file(spec_file)
     except ParseError as e:
-        console.print(f"[bold red]Parse error:[/bold red] {e}")
-        sys.exit(1)
+        console.print(f"[red]Parse error:[/red] {e}")
+        raise SystemExit(1)
 
-    out_dir = Path.cwd() / "generated"
+    state = load_state(STATE_FILE)
+    diff = diff_spec_against_state(spec, state)
+
+    if not (diff.to_add or diff.to_change or diff.to_destroy):
+        console.print("[green]No changes.[/green] State is up-to-date.")
+        return
+
+    console.print(f"Applying OpenLattice spec: [bold]{spec_file}[/bold]\n")
+
+    out_dir = Path("generated")
     out_dir.mkdir(exist_ok=True)
 
-    files = [
-        (out_dir / "main.py", fastapi_gen.generate(spec)),
-        (out_dir / "models.py", sqlalchemy_gen.generate(spec)),
-    ]
+    files = {
+        out_dir / "main.py": gen_fastapi(spec),
+        out_dir / "models.py": gen_sqlalchemy(spec),
+    }
+    for path, content in files.items():
+        path.write_text(content)
+        console.print(f"  [green]✓[/green] {path}")
 
-    for file_path, content in files:
-        file_path.write_text(content)
-        console.print(f"  [bold green]✓[/bold green] generated/{file_path.name}")
-
-    console.print(f"\nDone. {len(files)} files written.")
+    new_state = build_new_state(spec, state)
+    save_state(new_state, STATE_FILE)
+    console.print(f"\nDone. [bold]{len(files)}[/bold] files written. State updated (serial={new_state.serial}).")
 
 
-if __name__ == "__main__":
-    cli()
+@cli.command()
+def show():
+    """Show current state."""
+    state = load_state(STATE_FILE)
+    if not state.resources:
+        console.print("No state found. Run [bold]openlattice apply[/bold] first.")
+        return
+    console.print(f"[bold]State[/bold] (serial={state.serial}, lineage={state.lineage[:8]}…)\n")
+    for r in state.resources:
+        console.print(f"  [cyan]{r.type}.{r.label}[/cyan]  hash={r.spec_hash[:18]}…")
