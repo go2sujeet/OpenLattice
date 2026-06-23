@@ -1,0 +1,100 @@
+# E-Commerce platform spec
+# Demonstrates: multi-entity, CRUD APIs, events, workflow, queue
+
+entity "User" {
+  fields = {
+    id    = uuid
+    email = string
+    name  = string
+  }
+}
+
+entity "Product" {
+  fields = {
+    id    = uuid
+    name  = string
+    price = float
+    stock = int
+  }
+}
+
+entity "Order" {
+  fields = {
+    id         = uuid
+    user_id    = uuid
+    total      = float
+    status     = string
+    created_at = datetime
+  }
+}
+
+api "CreateOrder" {
+  method = POST
+  path   = "/orders"
+  input  = Order
+  output = Order
+}
+
+api "GetOrder" {
+  method = GET
+  path   = "/orders/{id}"
+  output = Order
+}
+
+api "ListOrders" {
+  method = GET
+  path   = "/orders"
+  output = Order
+}
+
+api "CreateProduct" {
+  method = POST
+  path   = "/products"
+  input  = Product
+  output = Product
+}
+
+api "GetProduct" {
+  method = GET
+  path   = "/products/{id}"
+  output = Product
+}
+
+api "GetUser" {
+  method = GET
+  path   = "/users/{id}"
+  output = User
+}
+
+event "OrderCreated" {
+  payload = {
+    order_id = uuid
+    user_id  = uuid
+    total    = float
+  }
+}
+
+event "OrderShipped" {
+  payload = {
+    order_id   = uuid
+    shipped_at = datetime
+  }
+}
+
+workflow "Checkout" {
+  steps = [
+    "validate_cart",
+    "reserve_inventory",
+    "charge_payment",
+    "create_order",
+    "publish_order_created"
+  ]
+}
+
+queue "email_notifications" {
+  retries = 5
+}
+
+queue "inventory_updates" {
+  retries = 3
+}

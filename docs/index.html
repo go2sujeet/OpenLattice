@@ -1,0 +1,1386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpenLattice Playground — Declarative App Compiler</title>
+  <meta name="description" content="Try OpenLattice in your browser. Write a .lattice spec and generate FastAPI + SQLAlchemy code instantly." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-0:       #0d1117;
+      --bg-1:       #161b22;
+      --bg-2:       #1c2128;
+      --bg-3:       #21262d;
+      --border:     #30363d;
+      --border-2:   #21262d;
+      --text-0:     #e6edf3;
+      --text-1:     #8b949e;
+      --text-2:     #6e7681;
+      --accent:     #58a6ff;
+      --accent-dim: #1f3156;
+      --green:      #3fb950;
+      --red:        #f85149;
+      --red-dim:    #3d1c1c;
+      --orange:     #d29922;
+      --purple:     #bc8cff;
+      --radius:     8px;
+      --header-h:   56px;
+      --tab-h:      40px;
+      --stats-h:    36px;
+      --error-h:    44px;
+      --mono:       'JetBrains Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+      --sans:       'Inter', system-ui, -apple-system, sans-serif;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg-0);
+      color: var(--text-0);
+      font-family: var(--sans);
+      font-size: 14px;
+      line-height: 1.5;
+      overflow: hidden;
+    }
+
+    /* ── HEADER ─────────────────────────────────────────────────────── */
+    header {
+      height: var(--header-h);
+      background: var(--bg-1);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #58a6ff 0%, #bc8cff 100%);
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .logo-text {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-0);
+    }
+
+    .logo-tagline {
+      font-size: 12px;
+      color: var(--text-1);
+      font-weight: 400;
+    }
+
+    header .spacer { flex: 1; }
+
+    .header-links {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-link {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      transition: background 0.15s, color 0.15s;
+      border: 1px solid var(--border);
+      color: var(--text-0);
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .btn-link:hover {
+      background: var(--bg-3);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .btn-link.accent {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .btn-link.accent:hover {
+      background: #253d6a;
+    }
+
+    /* ── PRESET BAR ─────────────────────────────────────────────────── */
+    .preset-bar {
+      height: 48px;
+      background: var(--bg-1);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 8px;
+      flex-shrink: 0;
+      overflow-x: auto;
+    }
+
+    .preset-bar span {
+      font-size: 12px;
+      color: var(--text-2);
+      margin-right: 4px;
+      white-space: nowrap;
+    }
+
+    .btn-preset {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--bg-2);
+      color: var(--text-1);
+      font-size: 13px;
+      font-family: var(--sans);
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+
+    .btn-preset:hover {
+      border-color: var(--accent);
+      color: var(--text-0);
+      background: var(--bg-3);
+    }
+
+    .btn-preset.active {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* ── MAIN LAYOUT ────────────────────────────────────────────────── */
+    .workspace {
+      display: flex;
+      height: calc(100vh - var(--header-h) - 48px - var(--error-h));
+      overflow: hidden;
+    }
+
+    /* ── LEFT PANEL ─────────────────────────────────────────────────── */
+    .panel-left {
+      width: 50%;
+      min-width: 280px;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .panel-header {
+      height: 38px;
+      background: var(--bg-2);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .panel-header-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-1);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .panel-header .filename {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text-0);
+      background: var(--bg-3);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px 8px;
+    }
+
+    .panel-header .spacer { flex: 1; }
+
+    #editor {
+      flex: 1;
+      background: var(--bg-0);
+      color: #abb2bf;
+      font-family: var(--mono);
+      font-size: 13.5px;
+      line-height: 1.7;
+      border: none;
+      outline: none;
+      resize: none;
+      padding: 16px 20px;
+      width: 100%;
+      overflow-y: auto;
+      overflow-x: auto;
+      tab-size: 2;
+      caret-color: var(--accent);
+    }
+
+    #editor::selection { background: #264f78; }
+
+    #editor::placeholder {
+      color: var(--text-2);
+    }
+
+    /* ── RIGHT PANEL ────────────────────────────────────────────────── */
+    .panel-right {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    /* Stats bar */
+    .stats-bar {
+      height: var(--stats-h);
+      background: var(--bg-2);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 16px;
+      flex-shrink: 0;
+      overflow-x: auto;
+    }
+
+    .stat-chip {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      color: var(--text-1);
+      white-space: nowrap;
+    }
+
+    .stat-chip .count {
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .stat-chip .label { color: var(--text-2); }
+
+    .stats-empty {
+      font-size: 12px;
+      color: var(--text-2);
+      font-style: italic;
+    }
+
+    /* Tab bar */
+    .tab-bar {
+      height: var(--tab-h);
+      background: var(--bg-1);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-end;
+      padding: 0 12px;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+
+    .tab {
+      padding: 8px 14px 7px;
+      font-size: 13px;
+      font-family: var(--mono);
+      font-weight: 500;
+      color: var(--text-2);
+      cursor: pointer;
+      border: 1px solid transparent;
+      border-bottom: none;
+      border-radius: 6px 6px 0 0;
+      transition: all 0.12s;
+      user-select: none;
+    }
+
+    .tab:hover { color: var(--text-1); background: var(--bg-2); }
+
+    .tab.active {
+      color: var(--text-0);
+      background: var(--bg-0);
+      border-color: var(--border);
+      border-bottom-color: var(--bg-0);
+      margin-bottom: -1px;
+    }
+
+    .tab-spacer { flex: 1; }
+
+    .btn-copy {
+      align-self: center;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 5px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-1);
+      font-size: 12px;
+      font-family: var(--sans);
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-copy:hover {
+      border-color: var(--green);
+      color: var(--green);
+      background: rgba(63, 185, 80, 0.08);
+    }
+
+    .btn-copy.copied {
+      border-color: var(--green);
+      color: var(--green);
+      background: rgba(63, 185, 80, 0.12);
+    }
+
+    /* Code output */
+    .code-output {
+      flex: 1;
+      overflow: auto;
+      background: var(--bg-0);
+    }
+
+    .code-output pre {
+      margin: 0;
+      padding: 0;
+      min-height: 100%;
+    }
+
+    .code-output pre code.hljs {
+      background: var(--bg-0) !important;
+      padding: 16px 20px !important;
+      font-family: var(--mono) !important;
+      font-size: 13px !important;
+      line-height: 1.7 !important;
+      display: block;
+    }
+
+    /* ── ERROR BAR ──────────────────────────────────────────────────── */
+    .error-bar {
+      height: var(--error-h);
+      background: var(--red-dim);
+      border-top: 1px solid var(--red);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 10px;
+      flex-shrink: 0;
+      transition: opacity 0.2s;
+    }
+
+    .error-bar.hidden {
+      opacity: 0;
+      pointer-events: none;
+      background: var(--bg-1);
+      border-top-color: var(--border);
+    }
+
+    .error-icon { font-size: 15px; }
+
+    .error-text {
+      font-family: var(--mono);
+      font-size: 12.5px;
+      color: var(--red);
+    }
+
+    .error-bar.hidden .error-text { color: var(--text-2); }
+
+    /* ── FOOTER ─────────────────────────────────────────────────────── */
+    footer {
+      /* pushed below error-bar which is always rendered */
+      display: none; /* hidden; use error-bar bottom edge */
+    }
+
+    /* ── RESIZER ────────────────────────────────────────────────────── */
+    .resizer {
+      width: 5px;
+      background: var(--border);
+      cursor: col-resize;
+      flex-shrink: 0;
+      transition: background 0.15s;
+      position: relative;
+    }
+
+    .resizer:hover, .resizer.dragging { background: var(--accent); }
+
+    /* ── SCROLLBARS ─────────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-2); }
+
+    /* ── MOBILE ─────────────────────────────────────────────────────── */
+    @media (max-width: 720px) {
+      html, body { overflow: auto; }
+
+      .workspace {
+        flex-direction: column;
+        height: auto;
+        overflow: visible;
+      }
+
+      .panel-left {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        height: 42vh;
+        min-height: 260px;
+      }
+
+      .panel-right { min-height: 50vh; }
+
+      .resizer { display: none; }
+
+      .error-bar {
+        position: static;
+      }
+
+      .logo-tagline { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── HEADER ──────────────────────────────────────────────────────────── -->
+<header>
+  <a class="logo" href="https://github.com/go2sujeet/OpenLattice" target="_blank" rel="noopener">
+    <div class="logo-icon">🔷</div>
+    <div>
+      <div class="logo-text">OpenLattice <span style="color:var(--text-2);font-weight:400;font-size:13px">Playground</span></div>
+      <div class="logo-tagline">Declarative app compiler · .lattice → FastAPI + SQLAlchemy</div>
+    </div>
+  </a>
+  <div class="spacer"></div>
+  <div class="header-links">
+    <a class="btn-link" href="https://github.com/go2sujeet/OpenLattice" target="_blank" rel="noopener">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+      GitHub
+    </a>
+    <a class="btn-link accent" href="https://github.com/go2sujeet/OpenLattice" target="_blank" rel="noopener">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.75.75 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25z"/></svg>
+      Star
+    </a>
+  </div>
+</header>
+
+<!-- ── PRESET BAR ───────────────────────────────────────────────────────── -->
+<div class="preset-bar">
+  <span>Examples:</span>
+  <button class="btn-preset active" data-preset="ecommerce">📦 E-Commerce</button>
+  <button class="btn-preset" data-preset="blog">📝 Blog</button>
+  <button class="btn-preset" data-preset="tasks">✅ Tasks</button>
+  <button class="btn-preset" data-preset="custom">✏️ Custom</button>
+</div>
+
+<!-- ── WORKSPACE ────────────────────────────────────────────────────────── -->
+<div class="workspace" id="workspace">
+
+  <!-- Left: Editor -->
+  <div class="panel-left" id="panelLeft">
+    <div class="panel-header">
+      <div class="panel-header-label">Input</div>
+      <span class="filename">spec.lattice</span>
+    </div>
+    <textarea id="editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" placeholder="Write your .lattice spec here…"></textarea>
+  </div>
+
+  <!-- Resizer -->
+  <div class="resizer" id="resizer"></div>
+
+  <!-- Right: Output -->
+  <div class="panel-right">
+    <!-- Stats bar -->
+    <div class="stats-bar" id="statsBar">
+      <span class="stats-empty">Awaiting valid spec…</span>
+    </div>
+
+    <!-- Tab bar -->
+    <div class="tab-bar">
+      <div class="tab active" data-tab="main">main.py</div>
+      <div class="tab" data-tab="models">models.py</div>
+      <div class="tab-spacer"></div>
+      <button class="btn-copy" id="btnCopy">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z"/><path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"/></svg>
+        Copy
+      </button>
+    </div>
+
+    <!-- Code output -->
+    <div class="code-output">
+      <pre><code class="language-python" id="codeOutput"><!-- filled by JS --></code></pre>
+    </div>
+  </div>
+</div>
+
+<!-- ── ERROR BAR ─────────────────────────────────────────────────────────── -->
+<div class="error-bar hidden" id="errorBar">
+  <span class="error-icon">⚠</span>
+  <span class="error-text" id="errorText">No errors</span>
+</div>
+
+<!-- ── SCRIPTS ───────────────────────────────────────────────────────────── -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  PRESETS
+// ═══════════════════════════════════════════════════════════════════════════
+
+const PRESETS = {
+  ecommerce: `entity "Order" {
+  fields = {
+    id         = uuid
+    user_id    = uuid
+    total      = float
+    status     = string
+    created_at = datetime
+  }
+}
+
+entity "Product" {
+  fields = {
+    id    = uuid
+    name  = string
+    price = float
+    stock = int
+  }
+}
+
+api "CreateOrder" {
+  method = POST
+  path   = "/orders"
+  input  = Order
+  output = Order
+}
+
+api "GetOrder" {
+  method = GET
+  path   = "/orders/{id}"
+  output = Order
+}
+
+api "ListOrders" {
+  method = GET
+  path   = "/orders"
+  output = Order
+}
+
+api "GetProduct" {
+  method = GET
+  path   = "/products/{id}"
+  output = Product
+}
+
+event "OrderCreated" {
+  payload = {
+    order_id = uuid
+    total    = float
+  }
+}
+
+workflow "Checkout" {
+  steps = [
+    "validate_cart",
+    "charge_payment",
+    "create_order",
+    "publish_order_created"
+  ]
+}
+
+queue "notifications" {
+  retries = 5
+}`,
+
+  blog: `entity "Post" {
+  fields = {
+    id           = uuid
+    author_id    = uuid
+    title        = string
+    content      = string
+    published_at = datetime
+  }
+}
+
+entity "Comment" {
+  fields = {
+    id        = uuid
+    post_id   = uuid
+    author_id = uuid
+    body      = string
+  }
+}
+
+api "CreatePost" {
+  method = POST
+  path   = "/posts"
+  input  = Post
+  output = Post
+}
+
+api "GetPost" {
+  method = GET
+  path   = "/posts/{id}"
+  output = Post
+}
+
+api "ListPosts" {
+  method = GET
+  path   = "/posts"
+  output = Post
+}
+
+api "CreateComment" {
+  method = POST
+  path   = "/posts/{id}/comments"
+  input  = Comment
+  output = Comment
+}
+
+event "PostPublished" {
+  payload = {
+    post_id   = uuid
+    author_id = uuid
+    title     = string
+  }
+}
+
+workflow "PublishPost" {
+  steps = [
+    "validate_content",
+    "run_moderation",
+    "set_published_status",
+    "notify_subscribers"
+  ]
+}`,
+
+  tasks: `entity "Task" {
+  fields = {
+    id         = uuid
+    title      = string
+    done       = bool
+    created_at = datetime
+  }
+}
+
+api "CreateTask" {
+  method = POST
+  path   = "/tasks"
+  input  = Task
+  output = Task
+}
+
+api "GetTask" {
+  method = GET
+  path   = "/tasks/{id}"
+  output = Task
+}
+
+api "ListTasks" {
+  method = GET
+  path   = "/tasks"
+  output = Task
+}
+
+api "UpdateTask" {
+  method = PUT
+  path   = "/tasks/{id}"
+  input  = Task
+  output = Task
+}`,
+
+  custom: ''
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  PARSER
+// ═══════════════════════════════════════════════════════════════════════════
+
+const VALID_TYPES = new Set(['uuid','int','float','string','bool','datetime','json']);
+
+function parseLattice(src) {
+  // Strip comments, track original line numbers via a line array
+  const rawLines = src.split('\n');
+  // Build token stream with line info
+  const tokens = [];
+  const lineMap = []; // token index → original line number (1-based)
+
+  for (let li = 0; li < rawLines.length; li++) {
+    const line = rawLines[li].replace(/#.*$/, ''); // strip # comments
+    // Tokenize this line
+    const re = /("(?:[^"\\]|\\.)*")|([=\{\}\[\],])|([A-Za-z_][A-Za-z0-9_\/\-\.]*)|(\d+(?:\.\d+)?)/g;
+    let m;
+    while ((m = re.exec(line)) !== null) {
+      tokens.push(m[0]);
+      lineMap.push(li + 1);
+    }
+  }
+
+  let pos = 0;
+
+  function peek() { return tokens[pos]; }
+  function next() { return tokens[pos++]; }
+  function expect(val) {
+    if (tokens[pos] !== val) {
+      const ln = lineMap[pos] || lineMap[lineMap.length - 1] || '?';
+      throw new Error(`Expected "${val}" but got "${tokens[pos] || 'EOF'}" at line ${ln}`);
+    }
+    return tokens[pos++];
+  }
+
+  function currentLine() {
+    return lineMap[pos] || (lineMap[lineMap.length - 1]) || '?';
+  }
+
+  function readName() {
+    const t = tokens[pos];
+    if (t === undefined) throw new Error(`Unexpected end of file at line ${currentLine()}`);
+    const ln = lineMap[pos];
+    pos++;
+    // Strip quotes if quoted
+    if (t.startsWith('"') && t.endsWith('"')) return t.slice(1, -1);
+    return t;
+  }
+
+  function readValue() {
+    const t = tokens[pos];
+    if (t === undefined) throw new Error(`Unexpected end of file at line ${currentLine()}`);
+    pos++;
+    if (t.startsWith('"') && t.endsWith('"')) return t.slice(1, -1);
+    return t;
+  }
+
+  // Parse a key = value pair where value is one of:
+  //   - scalar (bare or quoted)
+  //   - { field = type ... }
+  //   - [ "step1", "step2", ... ]
+  function parseValue() {
+    const t = peek();
+    if (t === '{') {
+      pos++; // consume {
+      const obj = {};
+      while (peek() !== '}') {
+        if (peek() === undefined) throw new Error(`Unclosed "{" near line ${currentLine()}`);
+        const k = readName();
+        expect('=');
+        const v = readValue();
+        obj[k] = v;
+        // optional comma
+        if (peek() === ',') pos++;
+      }
+      expect('}');
+      return obj;
+    } else if (t === '[') {
+      pos++; // consume [
+      const arr = [];
+      while (peek() !== ']') {
+        if (peek() === undefined) throw new Error(`Unclosed "[" near line ${currentLine()}`);
+        arr.push(readValue());
+        if (peek() === ',') pos++;
+      }
+      expect(']');
+      return arr;
+    } else {
+      return readValue();
+    }
+  }
+
+  function parseBlock() {
+    expect('{');
+    const props = {};
+    while (peek() !== '}') {
+      if (peek() === undefined) throw new Error(`Unclosed block near line ${currentLine()}`);
+      const k = readName();
+      expect('=');
+      props[k] = parseValue();
+    }
+    expect('}');
+    return props;
+  }
+
+  const result = {
+    entities: [],
+    apis: [],
+    events: [],
+    workflows: [],
+    queues: []
+  };
+
+  try {
+    while (pos < tokens.length) {
+      const keyword = next();
+      const name = readName();
+
+      if (keyword === 'entity') {
+        const props = parseBlock();
+        if (!props.fields || typeof props.fields !== 'object' || Array.isArray(props.fields)) {
+          throw new Error(`entity "${name}" is missing a fields = { ... } block`);
+        }
+        const fields = Object.entries(props.fields).map(([fname, ftype]) => {
+          if (!VALID_TYPES.has(ftype)) {
+            throw new Error(`Unknown type "${ftype}" for field "${fname}" in entity "${name}"`);
+          }
+          return { name: fname, type: ftype };
+        });
+        result.entities.push({ name, fields });
+
+      } else if (keyword === 'api') {
+        const props = parseBlock();
+        if (!props.method) throw new Error(`api "${name}" missing method`);
+        if (!props.path)   throw new Error(`api "${name}" missing path`);
+        if (!props.output) throw new Error(`api "${name}" missing output`);
+        result.apis.push({
+          name,
+          method: props.method.toUpperCase(),
+          path: props.path,
+          input: props.input || null,
+          output: props.output
+        });
+
+      } else if (keyword === 'event') {
+        const props = parseBlock();
+        let payload = [];
+        if (props.payload && typeof props.payload === 'object' && !Array.isArray(props.payload)) {
+          payload = Object.entries(props.payload).map(([pname, ptype]) => ({ name: pname, type: ptype }));
+        }
+        result.events.push({ name, payload });
+
+      } else if (keyword === 'workflow') {
+        const props = parseBlock();
+        const steps = Array.isArray(props.steps) ? props.steps : [];
+        result.workflows.push({ name, steps });
+
+      } else if (keyword === 'queue') {
+        const props = parseBlock();
+        result.queues.push({
+          name,
+          retries: props.retries !== undefined ? parseInt(props.retries, 10) : 0
+        });
+
+      } else {
+        const ln = lineMap[pos - 1] || '?';
+        throw new Error(`Unknown keyword "${keyword}" at line ${ln}`);
+      }
+    }
+  } catch (e) {
+    return { error: e.message };
+  }
+
+  return result;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  FASTAPI GENERATOR  →  main.py
+// ═══════════════════════════════════════════════════════════════════════════
+
+const PYDANTIC_TYPE = {
+  uuid:     'UUID',
+  int:      'int',
+  float:    'float',
+  string:   'str',
+  bool:     'bool',
+  datetime: 'datetime',
+  json:     'dict'
+};
+
+function indent(s, n = 4) {
+  return s.split('\n').map(l => ' '.repeat(n) + l).join('\n');
+}
+
+function generateFastAPI(spec) {
+  const lines = [];
+
+  // Collect required imports
+  const typeImports = new Set();
+  for (const ent of spec.entities) {
+    for (const f of ent.fields) {
+      if (f.type === 'uuid') typeImports.add('UUID');
+      if (f.type === 'datetime') typeImports.add('datetime');
+    }
+  }
+  // Also scan events
+  for (const ev of spec.events) {
+    for (const f of ev.payload) {
+      if (f.type === 'uuid') typeImports.add('UUID');
+      if (f.type === 'datetime') typeImports.add('datetime');
+    }
+  }
+
+  lines.push('# Generated by OpenLattice — do not edit');
+  lines.push('from fastapi import FastAPI, APIRouter');
+  lines.push('from pydantic import BaseModel');
+  if (typeImports.has('UUID'))     lines.push('from uuid import UUID');
+  if (typeImports.has('datetime')) lines.push('from datetime import datetime');
+  lines.push('from typing import Optional, List');
+  lines.push('');
+  lines.push('');
+  lines.push('app = FastAPI(title="OpenLattice Generated App")');
+  lines.push('router = APIRouter()');
+
+  // Pydantic models
+  if (spec.entities.length > 0) {
+    lines.push('');
+    lines.push('');
+    lines.push('# ── Models ──────────────────────────────────────────');
+    for (const ent of spec.entities) {
+      lines.push('');
+      lines.push('');
+      lines.push(`class ${ent.name}(BaseModel):`);
+      if (ent.fields.length === 0) {
+        lines.push('    pass');
+      } else {
+        for (const f of ent.fields) {
+          const pyType = PYDANTIC_TYPE[f.type] || 'str';
+          lines.push(`    ${f.name}: ${pyType}`);
+        }
+      }
+    }
+  }
+
+  // Event models
+  if (spec.events.length > 0) {
+    lines.push('');
+    lines.push('');
+    lines.push('# ── Event Payloads ──────────────────────────────────');
+    for (const ev of spec.events) {
+      lines.push('');
+      lines.push('');
+      lines.push(`class ${ev.name}Payload(BaseModel):`);
+      if (ev.payload.length === 0) {
+        lines.push('    pass');
+      } else {
+        for (const f of ev.payload) {
+          lines.push(`    ${f.name}: ${PYDANTIC_TYPE[f.type] || 'str'}`);
+        }
+      }
+    }
+  }
+
+  // Routes
+  if (spec.apis.length > 0) {
+    lines.push('');
+    lines.push('');
+    lines.push('# ── Routes ──────────────────────────────────────────');
+    for (const api of spec.apis) {
+      lines.push('');
+      lines.push('');
+      const method = api.method.toLowerCase();
+      const path   = api.path;
+      const output = api.output;
+      const input  = api.input;
+
+      // Determine path params
+      const pathParamRe = /\{(\w+)\}/g;
+      const pathParams = [];
+      let m;
+      while ((m = pathParamRe.exec(path)) !== null) {
+        pathParams.push(m[1]);
+      }
+
+      // Resolve path param types from entity fields
+      const entity = spec.entities.find(e => e.name === output);
+      function paramType(paramName) {
+        if (entity) {
+          const field = entity.fields.find(f => f.name === paramName);
+          if (field) return PYDANTIC_TYPE[field.type] || 'str';
+        }
+        return 'str';
+      }
+
+      // Build decorator
+      // For list endpoints (no path params, GET), use response_model=List[X]
+      const isList = method === 'get' && pathParams.length === 0 && !input;
+      const responseModel = isList ? `List[${output}]` : output;
+
+      lines.push(`@router.${method}("${path}", response_model=${responseModel})`);
+
+      // Build function signature
+      const args = [];
+      for (const pp of pathParams) {
+        args.push(`${pp}: ${paramType(pp)}`);
+      }
+      if (input) args.push(`body: ${input}`);
+
+      const returnType = isList ? `List[${output}]` : output;
+      const fnName = toSnakeCase(api.name);
+      lines.push(`async def ${fnName}(${args.join(', ')}) -> ${returnType}:`);
+      lines.push(`    raise NotImplementedError("Implement business logic here")`);
+    }
+  }
+
+  // Workflows
+  if (spec.workflows.length > 0) {
+    lines.push('');
+    lines.push('');
+    lines.push('# ── Workflows ────────────────────────────────────────');
+    for (const wf of spec.workflows) {
+      lines.push('');
+      lines.push('');
+      lines.push(`async def workflow_${toSnakeCase(wf.name)}():`);
+      lines.push(`    """Workflow: ${wf.name}`);
+      lines.push(`    Steps:`);
+      for (const step of wf.steps) {
+        lines.push(`      - ${step}`);
+      }
+      lines.push(`    """`);
+      for (const step of wf.steps) {
+        lines.push(`    await ${step}()`);
+      }
+    }
+  }
+
+  // Queues
+  if (spec.queues.length > 0) {
+    lines.push('');
+    lines.push('');
+    lines.push('# ── Queues ───────────────────────────────────────────');
+    for (const q of spec.queues) {
+      lines.push('');
+      lines.push(`${toSnakeCase(q.name)}_queue = {`);
+      lines.push(`    "name": "${q.name}",`);
+      lines.push(`    "retries": ${q.retries},`);
+      lines.push(`}`);
+    }
+  }
+
+  lines.push('');
+  lines.push('');
+  lines.push('app.include_router(router)');
+  lines.push('');
+
+  return lines.join('\n');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  SQLALCHEMY GENERATOR  →  models.py
+// ═══════════════════════════════════════════════════════════════════════════
+
+const SA_COL_TYPE = {
+  int:      'Integer',
+  float:    'Float',
+  string:   'String',
+  bool:     'Boolean',
+  datetime: 'DateTime',
+  json:     'JSON'
+};
+
+const SA_MAPPED_TYPE = {
+  uuid:     'uuid.UUID',
+  int:      'int',
+  float:    'float',
+  string:   'str',
+  bool:     'bool',
+  datetime: 'datetime',
+  json:     'dict'
+};
+
+function generateSQLAlchemy(spec) {
+  if (spec.entities.length === 0) {
+    return '# Generated by OpenLattice — do not edit\n# No entities defined yet.\n';
+  }
+
+  const lines = [];
+
+  // Gather needed imports
+  const saImports = new Set();
+  let needUUID = false;
+  let needDatetime = false;
+
+  for (const ent of spec.entities) {
+    for (const f of ent.fields) {
+      if (f.type === 'uuid') { needUUID = true; continue; }
+      if (f.type === 'datetime') needDatetime = true;
+      if (SA_COL_TYPE[f.type]) saImports.add(SA_COL_TYPE[f.type]);
+    }
+  }
+
+  lines.push('# Generated by OpenLattice — do not edit');
+  lines.push('import uuid');
+  if (needDatetime) lines.push('from datetime import datetime');
+  const saList = [...saImports].sort();
+  if (saList.length > 0) {
+    lines.push(`from sqlalchemy import ${saList.join(', ')}`);
+  }
+  if (needUUID) {
+    lines.push('from sqlalchemy.dialects.postgresql import UUID');
+  }
+  lines.push('from sqlalchemy.orm import DeclarativeBase, mapped_column, Mapped');
+  lines.push('');
+  lines.push('');
+  lines.push('class Base(DeclarativeBase):');
+  lines.push('    pass');
+
+  for (const ent of spec.entities) {
+    lines.push('');
+    lines.push('');
+    lines.push(`class ${ent.name}(Base):`);
+    lines.push(`    __tablename__ = "${toSnakeCase(ent.name)}s"`);
+    lines.push('');
+
+    for (const f of ent.fields) {
+      const mappedT = SA_MAPPED_TYPE[f.type] || 'str';
+      let colArgs;
+
+      if (f.type === 'uuid') {
+        if (f.name === 'id') {
+          colArgs = 'UUID(as_uuid=True), primary_key=True, default=uuid.uuid4';
+        } else {
+          colArgs = 'UUID(as_uuid=True), nullable=False';
+        }
+      } else {
+        const saT = SA_COL_TYPE[f.type] || 'String';
+        colArgs = `${saT}, nullable=False`;
+      }
+
+      lines.push(`    ${f.name}: Mapped[${mappedT}] = mapped_column(${colArgs})`);
+    }
+  }
+
+  lines.push('');
+
+  return lines.join('\n');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  UTILITY
+// ═══════════════════════════════════════════════════════════════════════════
+
+function toSnakeCase(s) {
+  return s
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1_$2')
+    .replace(/([a-z\d])([A-Z])/g, '$1_$2')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  UI STATE
+// ═══════════════════════════════════════════════════════════════════════════
+
+const elEditor    = document.getElementById('editor');
+const elCode      = document.getElementById('codeOutput');
+const elError     = document.getElementById('errorBar');
+const elErrorTxt  = document.getElementById('errorText');
+const elStatsBar  = document.getElementById('statsBar');
+const elBtnCopy   = document.getElementById('btnCopy');
+
+let currentTab  = 'main';   // 'main' | 'models'
+let currentSpec = null;     // last successfully parsed spec
+let generatedMain   = '';
+let generatedModels = '';
+
+// Debounce
+let debounceTimer = null;
+function scheduleUpdate() {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(runUpdate, 400);
+}
+
+function runUpdate() {
+  const src = elEditor.value.trim();
+
+  if (!src) {
+    showError(null);
+    showStats(null);
+    renderCode('# OpenLattice Playground\n# Start typing a .lattice spec on the left,\n# or pick an example above.\n');
+    return;
+  }
+
+  const result = parseLattice(elEditor.value);
+
+  if (result.error) {
+    showError(result.error);
+    return;
+  }
+
+  showError(null);
+  currentSpec = result;
+  generatedMain   = generateFastAPI(result);
+  generatedModels = generateSQLAlchemy(result);
+
+  showStats(result);
+  renderCode(currentTab === 'main' ? generatedMain : generatedModels);
+}
+
+function renderCode(code) {
+  elCode.className = 'language-python';
+  elCode.textContent = code;
+  hljs.highlightElement(elCode);
+}
+
+function showError(msg) {
+  if (msg) {
+    elError.classList.remove('hidden');
+    elErrorTxt.textContent = msg;
+  } else {
+    elError.classList.add('hidden');
+    elErrorTxt.textContent = '';
+  }
+}
+
+function showStats(spec) {
+  if (!spec) {
+    elStatsBar.innerHTML = '<span class="stats-empty">Awaiting valid spec…</span>';
+    return;
+  }
+  const parts = [];
+  if (spec.entities.length)   parts.push({ n: spec.entities.length,   label: 'entit' + (spec.entities.length === 1 ? 'y' : 'ies') });
+  if (spec.apis.length)       parts.push({ n: spec.apis.length,       label: 'API'   + (spec.apis.length === 1 ? '' : 's') });
+  if (spec.events.length)     parts.push({ n: spec.events.length,     label: 'event' + (spec.events.length === 1 ? '' : 's') });
+  if (spec.workflows.length)  parts.push({ n: spec.workflows.length,  label: 'workflow' + (spec.workflows.length === 1 ? '' : 's') });
+  if (spec.queues.length)     parts.push({ n: spec.queues.length,     label: 'queue' + (spec.queues.length === 1 ? '' : 's') });
+
+  if (parts.length === 0) {
+    elStatsBar.innerHTML = '<span class="stats-empty">Empty spec — add entities, apis, events…</span>';
+    return;
+  }
+
+  elStatsBar.innerHTML = parts.map(p =>
+    `<span class="stat-chip"><span class="count">${p.n}</span><span class="label">${p.label}</span></span>`
+  ).join('<span style="color:var(--border-2);font-size:14px;padding:0 2px">·</span>');
+}
+
+// ─── Tabs ────────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    currentTab = tab.dataset.tab;
+    if (currentSpec) {
+      renderCode(currentTab === 'main' ? generatedMain : generatedModels);
+    }
+  });
+});
+
+// ─── Copy ────────────────────────────────────────────────────────────────
+elBtnCopy.addEventListener('click', () => {
+  const code = currentTab === 'main' ? generatedMain : generatedModels;
+  if (!code) return;
+  navigator.clipboard.writeText(code).then(() => {
+    elBtnCopy.classList.add('copied');
+    elBtnCopy.innerHTML = `
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0z"/></svg>
+      Copied!`;
+    setTimeout(() => {
+      elBtnCopy.classList.remove('copied');
+      elBtnCopy.innerHTML = `
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z"/><path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"/></svg>
+        Copy`;
+    }, 2000);
+  }).catch(() => {
+    // Fallback
+    const ta = document.createElement('textarea');
+    ta.value = code;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  });
+});
+
+// ─── Preset buttons ──────────────────────────────────────────────────────
+document.querySelectorAll('.btn-preset').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.btn-preset').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const preset = btn.dataset.preset;
+    elEditor.value = PRESETS[preset] || '';
+    clearTimeout(debounceTimer);
+    runUpdate();
+  });
+});
+
+// ─── Live update ─────────────────────────────────────────────────────────
+elEditor.addEventListener('input', scheduleUpdate);
+elEditor.addEventListener('keyup', scheduleUpdate);
+
+// ─── Tab key in textarea ─────────────────────────────────────────────────
+elEditor.addEventListener('keydown', e => {
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const start = elEditor.selectionStart;
+    const end   = elEditor.selectionEnd;
+    elEditor.value = elEditor.value.substring(0, start) + '  ' + elEditor.value.substring(end);
+    elEditor.selectionStart = elEditor.selectionEnd = start + 2;
+    scheduleUpdate();
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  RESIZER (drag to resize panels)
+// ═══════════════════════════════════════════════════════════════════════════
+
+const resizer   = document.getElementById('resizer');
+const panelLeft = document.getElementById('panelLeft');
+const workspace = document.getElementById('workspace');
+let isResizing  = false;
+
+resizer.addEventListener('mousedown', e => {
+  isResizing = true;
+  resizer.classList.add('dragging');
+  document.body.style.userSelect = 'none';
+  document.body.style.cursor = 'col-resize';
+  e.preventDefault();
+});
+
+document.addEventListener('mousemove', e => {
+  if (!isResizing) return;
+  const rect = workspace.getBoundingClientRect();
+  const newLeft = Math.max(200, Math.min(e.clientX - rect.left, rect.width - 200));
+  panelLeft.style.width = newLeft + 'px';
+});
+
+document.addEventListener('mouseup', () => {
+  if (!isResizing) return;
+  isResizing = false;
+  resizer.classList.remove('dragging');
+  document.body.style.userSelect = '';
+  document.body.style.cursor = '';
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  INIT — load default preset
+// ═══════════════════════════════════════════════════════════════════════════
+
+(function init() {
+  elEditor.value = PRESETS.ecommerce;
+  runUpdate();
+})();
+</script>
+
+</body>
+</html>
