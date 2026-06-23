@@ -37,7 +37,7 @@ api "CreateOrder" {                 →
   path   = "/orders"                →
   input  = Order                    →         class Order(Base):
   output = Order                    →             __tablename__ = "orders"
-}                                   →             id = mapped_column(UUID(as_uuid=True), primary_key=True)
+}                                   →             id = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
                                     →             amount = mapped_column(Integer, nullable=False)
                                     →             status = mapped_column(String, nullable=False)
 ```
@@ -158,10 +158,12 @@ uvicorn generated.main:app --reload
 # From PyPI (coming soon)
 pip install openlattice
 
-# From source
+# From source (requires uv: pip install uv)
 git clone https://github.com/go2sujeet/OpenLattice
 cd OpenLattice
 uv pip install -e .
+# Or with plain pip:
+pip install -e .
 ```
 
 **Try instantly with no local install:** [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/go2sujeet/OpenLattice)

@@ -5,7 +5,6 @@ import uuid
 from sqlalchemy import Integer, Float, String, DateTime
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import DeclarativeBase, mapped_column, Mapped
-from typing import Optional
 from datetime import datetime
 
 

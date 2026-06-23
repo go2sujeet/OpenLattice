@@ -98,7 +98,6 @@ def generate(spec: LatticeSpec) -> str:
         import_lines.append("from sqlalchemy.dialects.postgresql import UUID")
 
     import_lines.append("from sqlalchemy.orm import DeclarativeBase, mapped_column, Mapped")
-    import_lines.append("from typing import Optional")
 
     # Extra Python-side type imports
     if "datetime" in used_dsl_types:

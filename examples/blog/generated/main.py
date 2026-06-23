@@ -3,9 +3,9 @@
 
 from fastapi import FastAPI, APIRouter
 from pydantic import BaseModel
+from typing import List
 from uuid import UUID
 from datetime import datetime
-from typing import Optional
 
 
 app = FastAPI(title="OpenLattice Generated App")
@@ -48,8 +48,8 @@ async def get_post(id: UUID) -> Post:
     raise NotImplementedError("Implement business logic here")
 
 
-@router.get("/posts", response_model=Post)
-async def list_posts() -> Post:
+@router.get("/posts", response_model=List[Post])
+async def list_posts() -> List[Post]:
     raise NotImplementedError("Implement business logic here")
 
 
