@@ -6,6 +6,11 @@ from openlattice.ir import (
     LatticeSpec, EntityDef, FieldDef, ApiDef, EventDef, WorkflowDef, QueueDef
 )
 
+_KIND_LABELS = {
+    "LBRACE": '"{{"', "RBRACE": '"}}"', "LBRACKET": '"["', "RBRACKET": '"]"',
+    "EQ": '"="', "STRING": "string", "IDENT": "identifier", "NUMBER": "number",
+}
+
 _VALID_RESOURCE_TYPES = {
     "lattice_entity", "lattice_api", "lattice_event", "lattice_workflow", "lattice_queue"
 }
@@ -77,7 +82,9 @@ class _Parser:
         if tok is None:
             raise ParseError("Unexpected end of file")
         if kind and tok.kind != kind:
-            raise ParseError(f"Expected {kind}, got {tok.kind} ({tok.value!r})", tok.line)
+            expected = _KIND_LABELS.get(kind, kind)
+            got = _KIND_LABELS.get(tok.kind, tok.kind)
+            raise ParseError(f"Expected {expected}, got {got} ({tok.value!r})", tok.line)
         if value and tok.value != value:
             raise ParseError(f"Expected {value!r}, got {tok.value!r}", tok.line)
         self._pos += 1
@@ -161,7 +168,9 @@ class _Parser:
         name = attrs.get("name")
         if not name:
             raise ParseError(f"lattice_entity '{label}' missing 'name'", line)
-        raw_fields = attrs.get("fields", {})
+        if "fields" not in attrs:
+            raise ParseError(f"lattice_entity '{label}' missing 'fields' block", line)
+        raw_fields = attrs["fields"]
         if not isinstance(raw_fields, dict):
             raise ParseError(f"lattice_entity '{label}' fields must be a block", line)
         fields = []
@@ -252,7 +261,12 @@ class _Parser:
                                 name = self._consume_string()
                     else:
                         self._pos += 1
-                self._label_to_name[(res_type, label)] = name
+                key = (res_type, label)
+                if key in self._label_to_name:
+                    raise ParseError(
+                        f"Duplicate resource: {res_type} \"{label}\" is defined more than once", 0
+                    )
+                self._label_to_name[key] = name
             else:
                 self._pos += 1
         self._pos = saved

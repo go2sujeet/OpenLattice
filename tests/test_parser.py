@@ -139,3 +139,50 @@ resource "lattice_api" "bad" {
     with pytest.raises(ParseError) as exc:
         parse_string(src)
     assert "nonexistent" in str(exc.value)
+
+def test_duplicate_label_raises():
+    src = '''
+resource "lattice_entity" "order" {
+  name = "Order"
+  fields = { id = "uuid" }
+}
+resource "lattice_entity" "order" {
+  name = "OrderDuplicate"
+  fields = { id = "uuid" }
+}
+'''
+    with pytest.raises(ParseError) as exc:
+        parse_string(src)
+    assert "duplicate" in str(exc.value).lower()
+
+def test_entity_missing_fields_raises():
+    src = '''
+resource "lattice_entity" "bad" {
+  name = "Bad"
+}
+'''
+    with pytest.raises(ParseError) as exc:
+        parse_string(src)
+    assert "fields" in str(exc.value).lower()
+
+def test_empty_spec():
+    spec = parse_string("")
+    assert spec.entities == []
+    assert spec.apis == []
+
+def test_unsupported_reference_attr_raises():
+    src = '''
+resource "lattice_entity" "order" {
+  name = "Order"
+  fields = { id = "uuid" }
+}
+resource "lattice_api" "bad" {
+  name   = "Bad"
+  method = "GET"
+  path   = "/bad"
+  output = lattice_entity.order.id
+}
+'''
+    with pytest.raises(ParseError) as exc:
+        parse_string(src)
+    assert ".id" in str(exc.value) or "name" in str(exc.value).lower()
