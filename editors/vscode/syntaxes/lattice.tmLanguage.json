@@ -1,0 +1,98 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "OpenLattice",
+  "scopeName": "source.lattice",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#resource-block" },
+    { "include": "#cross-resource-refs" },
+    { "include": "#resource-type-strings" },
+    { "include": "#http-method-values" },
+    { "include": "#field-type-values" },
+    { "include": "#attribute-names" },
+    { "include": "#strings" },
+    { "include": "#numbers" },
+    { "include": "#booleans" },
+    { "include": "#arrays" },
+    { "include": "#operators" }
+  ],
+  "repository": {
+    "comments": {
+      "name": "comment.line.number-sign.lattice",
+      "match": "#.*$"
+    },
+    "resource-block": {
+      "name": "keyword.control.resource.lattice",
+      "match": "\\bresource\\b"
+    },
+    "resource-type-strings": {
+      "name": "entity.name.type.lattice",
+      "match": "\"(lattice_entity|lattice_api|lattice_event|lattice_workflow|lattice_queue)\"",
+      "captures": {
+        "1": { "name": "entity.name.type.lattice" }
+      }
+    },
+    "http-method-values": {
+      "name": "constant.language.http-method.lattice",
+      "match": "\"(GET|POST|PUT|DELETE|PATCH)\"",
+      "captures": {
+        "1": { "name": "constant.language.http-method.lattice" }
+      }
+    },
+    "field-type-values": {
+      "name": "support.type.primitive.lattice",
+      "match": "\"(uuid|string|int|float|bool|datetime|json)\"",
+      "captures": {
+        "1": { "name": "support.type.primitive.lattice" }
+      }
+    },
+    "cross-resource-refs": {
+      "name": "variable.other.reference.lattice",
+      "match": "\\b(lattice_entity|lattice_api|lattice_event|lattice_workflow|lattice_queue)\\.(\\w+)\\.(\\w+)\\b",
+      "captures": {
+        "1": { "name": "entity.name.type.lattice" },
+        "2": { "name": "variable.other.label.lattice" },
+        "3": { "name": "variable.other.attribute.lattice" }
+      }
+    },
+    "attribute-names": {
+      "name": "variable.other.attribute.lattice",
+      "match": "\\b(name|method|path|fields|payload|input|output|steps|retries)\\b(?=\\s*=)"
+    },
+    "strings": {
+      "name": "string.quoted.double.lattice",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": []
+    },
+    "numbers": {
+      "name": "constant.numeric.lattice",
+      "match": "\\b\\d+(?:\\.\\d+)?\\b"
+    },
+    "booleans": {
+      "name": "constant.language.boolean.lattice",
+      "match": "\\b(true|false)\\b"
+    },
+    "arrays": {
+      "name": "meta.array.lattice",
+      "begin": "\\[",
+      "end": "\\]",
+      "beginCaptures": {
+        "0": { "name": "punctuation.definition.array.begin.lattice" }
+      },
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.array.end.lattice" }
+      },
+      "patterns": [
+        { "include": "#strings" },
+        { "include": "#numbers" },
+        { "include": "#booleans" },
+        { "include": "#comments" }
+      ]
+    },
+    "operators": {
+      "name": "keyword.operator.assignment.lattice",
+      "match": "="
+    }
+  }
+}

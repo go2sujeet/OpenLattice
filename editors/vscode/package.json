@@ -1,0 +1,37 @@
+{
+  "name": "openlattice-vscode",
+  "displayName": "OpenLattice",
+  "description": "Language support for .lattice files",
+  "version": "0.1.0",
+  "publisher": "go2sujeet",
+  "engines": { "vscode": "^1.85.0" },
+  "categories": ["Programming Languages"],
+  "activationEvents": ["onLanguage:lattice"],
+  "main": "./extension.js",
+  "contributes": {
+    "languages": [{
+      "id": "lattice",
+      "aliases": ["OpenLattice", "lattice"],
+      "extensions": [".lattice"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "lattice",
+      "scopeName": "source.lattice",
+      "path": "./syntaxes/lattice.tmLanguage.json"
+    }],
+    "configuration": {
+      "title": "OpenLattice",
+      "properties": {
+        "openlattice.lspPath": {
+          "type": "string",
+          "default": "openlattice-lsp",
+          "description": "Path to the openlattice-lsp binary"
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  }
+}
