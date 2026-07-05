@@ -57,19 +57,40 @@ def _api_attrs(a: ApiDef) -> dict[str, Any]:
         d["input"] = a.input_entity
     if a.output_entity:
         d["output"] = a.output_entity
+    if a.publishes:
+        d["publishes"] = list(a.publishes)
+    if a.crud_operation:
+        d["crud"] = a.crud_operation
     return d
 
 
 def _event_attrs(e: EventDef) -> dict[str, Any]:
-    return {"name": e.name, "payload": {f.name: f.type for f in e.payload}}
+    d: dict[str, Any] = {"name": e.name, "payload": {f.name: f.type for f in e.payload}}
+    if e.published_by:
+        d["published_by"] = list(e.published_by)
+    if e.consumed_by:
+        d["consumed_by"] = list(e.consumed_by)
+    return d
 
 
 def _workflow_attrs(w: WorkflowDef) -> dict[str, Any]:
-    return {"name": w.name, "steps": w.steps}
+    steps_serialized: list[dict[str, Any]] = [
+        {"name": s.name, "input": s.input, "output": s.output, "on_error": s.on_error}
+        for s in w.steps
+    ]
+    attrs: dict[str, Any] = {"name": w.name, "steps": steps_serialized}
+    if w.trigger:
+        attrs["trigger"] = w.trigger
+    return attrs
 
 
 def _queue_attrs(q: QueueDef) -> dict[str, Any]:
-    return {"name": q.name, "retries": q.retries}
+    attrs: dict[str, Any] = {"name": q.name, "retries": q.retries}
+    if q.message_type:
+        attrs["message_type"] = q.message_type
+    if q.dlq:
+        attrs["dlq"] = q.dlq
+    return attrs
 
 
 def spec_resources(spec: LatticeSpec) -> list[tuple[str, str, dict[str, Any]]]:

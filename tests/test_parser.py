@@ -1,5 +1,6 @@
 import pytest
 
+from openlattice.ir import WorkflowStep
 from openlattice.parser import ParseError, parse_string
 
 MINIMAL_SPEC = """
@@ -71,7 +72,10 @@ resource "lattice_workflow" "checkout" {
     spec = parse_string(src)
     assert len(spec.workflows) == 1
     assert spec.workflows[0].name == "Checkout"
-    assert spec.workflows[0].steps == ["validate_order", "charge_customer"]
+    assert spec.workflows[0].steps == [
+        WorkflowStep(name="validate_order"),
+        WorkflowStep(name="charge_customer"),
+    ]
 
 
 def test_parse_queue():

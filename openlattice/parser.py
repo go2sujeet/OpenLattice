@@ -6,7 +6,16 @@ import re
 from dataclasses import dataclass
 from typing import Any, cast
 
-from openlattice.ir import ApiDef, EntityDef, EventDef, FieldDef, LatticeSpec, QueueDef, WorkflowDef
+from openlattice.ir import (
+    ApiDef,
+    EntityDef,
+    EventDef,
+    FieldDef,
+    LatticeSpec,
+    QueueDef,
+    WorkflowDef,
+    WorkflowStep,
+)
 
 _KIND_LABELS = {
     "LBRACE": '"{{"',
@@ -121,6 +130,12 @@ class _Parser:
         if tok.kind == "LBRACKET":
             return self._parse_array()
         if tok.kind == "IDENT":
+            if tok.value == "true":
+                self._pos += 1
+                return True
+            if tok.value == "false":
+                self._pos += 1
+                return False
             if (
                 self._pos + 4 < len(self._tokens)
                 and self._tokens[self._pos + 1].kind == "DOT"
@@ -152,6 +167,8 @@ class _Parser:
             key_tok = self._consume("IDENT")
             self._consume("EQ")
             result[key_tok.value] = self._parse_value()
+            if (tok2 := self._peek()) is not None and tok2.kind == "COMMA":
+                self._pos += 1
         self._consume("RBRACE")
         return result
 
@@ -211,12 +228,19 @@ class _Parser:
                 f"Invalid method '{method}' in api '{name}'. Valid: {', '.join(_VALID_METHODS)}",
                 line,
             )
+        publishes_raw = attrs.get("publishes", [])
+        if not isinstance(publishes_raw, list):
+            raise ParseError(f"lattice_api '{label}' publishes must be a list", line)
+        publishes = [str(p) for p in publishes_raw]
+
         return ApiDef(
             name=name,
             method=method.upper(),
             path=path,
             input_entity=attrs.get("input") or None,
             output_entity=attrs.get("output") or None,
+            publishes=publishes,
+            crud_operation=attrs.get("crud"),
         )
 
     def _build_event(self, label: str, attrs: dict[str, Any], line: int) -> EventDef:
@@ -232,24 +256,71 @@ class _Parser:
             if ftype not in _VALID_FIELD_TYPES:
                 raise ParseError(f"Unknown type '{ftype}' in event '{name}' payload", line)
             payload.append(FieldDef(name=fname, type=ftype))
-        return EventDef(name=name, payload=payload)
+        published_by_raw = attrs.get("published_by", [])
+        if not isinstance(published_by_raw, list):
+            raise ParseError(f"lattice_event '{label}' published_by must be a list", line)
+        published_by = [str(p) for p in published_by_raw]
+
+        consumed_by_raw = attrs.get("consumed_by", [])
+        if not isinstance(consumed_by_raw, list):
+            raise ParseError(f"lattice_event '{label}' consumed_by must be a list", line)
+        consumed_by = [str(c) for c in consumed_by_raw]
+
+        return EventDef(
+            name=name,
+            payload=payload,
+            published_by=published_by,
+            consumed_by=consumed_by,
+        )
 
     def _build_workflow(self, label: str, attrs: dict[str, Any], line: int) -> WorkflowDef:
         name = attrs.get("name")
-        steps = attrs.get("steps", [])
+        steps_raw = attrs.get("steps", [])
         if not name:
             raise ParseError(f"lattice_workflow '{label}' missing 'name'", line)
-        if not isinstance(steps, list):
+        if not isinstance(steps_raw, list):
             raise ParseError(f"lattice_workflow '{label}' steps must be a list", line)
-        steps_list = cast(list[str], steps)
-        return WorkflowDef(name=name, steps=steps_list)
+
+        steps: list[WorkflowStep] = []
+        for item in steps_raw:
+            if isinstance(item, str):
+                steps.append(WorkflowStep(name=item))
+            elif isinstance(item, dict):
+                step_name = item.get("name", "")
+                if not step_name:
+                    raise ParseError(
+                        f"lattice_workflow '{label}' step missing 'name'", line
+                    )
+                steps.append(
+                    WorkflowStep(
+                        name=str(step_name),
+                        input=item.get("input"),
+                        output=item.get("output"),
+                        on_error=item.get("on_error"),
+                    )
+                )
+            else:
+                raise ParseError(
+                    f"lattice_workflow '{label}' step must be a string or block", line
+                )
+
+        trigger = attrs.get("trigger")
+        return WorkflowDef(name=name, steps=steps, trigger=trigger)
 
     def _build_queue(self, label: str, attrs: dict[str, Any], line: int) -> QueueDef:
         name = attrs.get("name")
         if not name:
             raise ParseError(f"lattice_queue '{label}' missing 'name'", line)
         retries = attrs.get("retries", 3)
-        return QueueDef(name=name, retries=int(retries))
+        message_type = attrs.get("message_type")
+        dlq_raw = attrs.get("dlq", False)
+        dlq = bool(dlq_raw) if isinstance(dlq_raw, (bool, int)) else False
+        return QueueDef(
+            name=name,
+            retries=int(retries),
+            message_type=message_type,
+            dlq=dlq,
+        )
 
     def _first_pass(self):
         """Collect (type, label) -> name for reference resolution."""

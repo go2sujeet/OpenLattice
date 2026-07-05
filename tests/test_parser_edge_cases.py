@@ -6,6 +6,7 @@ import traceback
 
 sys.path.insert(0, ".")
 
+from openlattice.ir import WorkflowStep
 from openlattice.parser import parse_string, ParseError
 from openlattice.generators.fastapi_gen import generate as fastapi_generate
 from openlattice.generators.sqlalchemy_gen import generate as sqlalchemy_generate
@@ -75,7 +76,11 @@ resource "lattice_queue" "welcome_email" {
     assert spec.apis[0].output_entity == "User"
     assert spec.events[0].name == "UserLogin"
     assert spec.workflows[0].name == "Onboarding"
-    assert spec.workflows[0].steps == ["send_welcome", "setup_profile", "notify_admin"]
+    assert spec.workflows[0].steps == [
+        WorkflowStep(name="send_welcome"),
+        WorkflowStep(name="setup_profile"),
+        WorkflowStep(name="notify_admin"),
+    ]
     assert spec.queues[0].name == "welcome_email"
     assert spec.queues[0].retries == 3
 
@@ -123,25 +128,20 @@ def test_2():
 # Test 3: Arrays with mixed types
 # ---------------------------------------------------------------------------
 def test_3():
+    """Non-string/non-dict step items are now rejected since steps are
+    WorkflowStep objects (enriched IR). Numbers as step names never made
+    sense — a workflow step must be a named action."""
     src = '''
 resource "lattice_workflow" "mixed" {
   name  = "MixedWorkflow"
   steps = ["alpha", 42, "beta", 3.14, "gamma", 0]
 }
 '''
-    spec = parse_string(src)
-    steps = spec.workflows[0].steps
-    assert len(steps) == 6, f"Expected 6 steps, got {len(steps)}"
-    assert steps[0] == "alpha", f"Expected 'alpha', got {steps[0]}"
-    assert steps[1] == 42, f"Expected 42, got {steps[1]}"
-    assert isinstance(steps[1], int), f"steps[1] is {type(steps[1]).__name__}, expected int"
-    assert steps[2] == "beta"
-    assert steps[3] == 3.14, f"Expected 3.14, got {steps[3]}"
-    assert isinstance(steps[3], float), f"steps[3] is {type(steps[3]).__name__}, expected float"
-    assert steps[4] == "gamma"
-    assert steps[5] == 0, f"Expected 0, got {steps[5]}"
-    assert isinstance(steps[5], int), f"steps[5] is {type(steps[5]).__name__}, expected int"
-    print(f"        Mixed array types verified: str, int, str, float, str, int")
+    try:
+        parse_string(src)
+        raise AssertionError("Expected ParseError for non-string step items")
+    except ParseError:
+        pass
 
 
 # ---------------------------------------------------------------------------
@@ -225,27 +225,18 @@ resource "lattice_entity" "bare" {
 # Test 7: Int and float number parsing
 # ---------------------------------------------------------------------------
 def test_7():
+    """Numeric-only step lists are rejected — step names must be strings."""
     src = '''
 resource "lattice_workflow" "num_test" {
   name  = "NumTest"
   steps = [3.14, 2.718, 1.0, 100, 0, 999999]
 }
 '''
-    spec = parse_string(src)
-    steps = spec.workflows[0].steps
-    assert steps[0] == 3.14
-    assert isinstance(steps[0], float), f"Expected float, got {type(steps[0]).__name__}"
-    assert steps[1] == 2.718
-    assert isinstance(steps[1], float), f"Expected float, got {type(steps[1]).__name__}"
-    assert steps[2] == 1.0
-    assert isinstance(steps[2], float), f"Expected float, got {type(steps[2]).__name__}"
-    assert steps[3] == 100
-    assert isinstance(steps[3], int), f"Expected int, got {type(steps[3]).__name__}"
-    assert steps[4] == 0
-    assert isinstance(steps[4], int), f"Expected int, got {type(steps[4]).__name__}"
-    assert steps[5] == 999999
-    assert isinstance(steps[5], int), f"Expected int, got {type(steps[5]).__name__}"
-    print(f"        Number types: {[type(x).__name__ for x in steps]}")
+    try:
+        parse_string(src)
+        raise AssertionError("Expected ParseError for numeric step items")
+    except ParseError:
+        pass
 
 
 # ---------------------------------------------------------------------------
