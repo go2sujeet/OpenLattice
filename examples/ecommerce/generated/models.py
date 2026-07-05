@@ -2,42 +2,38 @@
 
 
 import uuid
-from datetime import datetime
-
-from sqlalchemy import DateTime, String
+from sqlalchemy import Integer, Float, String, DateTime
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import DeclarativeBase, mapped_column, Mapped
+from datetime import datetime
 
 
 class Base(DeclarativeBase):
     pass
 
 
-class Author(Base):
-    __tablename__ = "authors"
+class User(Base):
+    __tablename__ = "users"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    username: Mapped[str] = mapped_column(String, nullable=False)
     email: Mapped[str] = mapped_column(String, nullable=False)
-    bio: Mapped[str] = mapped_column(String, nullable=False)
+    name: Mapped[str] = mapped_column(String, nullable=False)
 
 
-class Post(Base):
-    __tablename__ = "posts"
+class Product(Base):
+    __tablename__ = "products"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    author_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
-    title: Mapped[str] = mapped_column(String, nullable=False)
-    content: Mapped[str] = mapped_column(String, nullable=False)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    price: Mapped[float] = mapped_column(Float, nullable=False)
+    stock: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class Order(Base):
+    __tablename__ = "orders"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
+    total: Mapped[float] = mapped_column(Float, nullable=False)
     status: Mapped[str] = mapped_column(String, nullable=False)
-    published_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-
-
-class Comment(Base):
-    __tablename__ = "comments"
-
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    post_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
-    author_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
-    body: Mapped[str] = mapped_column(String, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)

@@ -2,11 +2,10 @@
 
 
 import uuid
-from datetime import datetime
-
-from sqlalchemy import DateTime, String
+from sqlalchemy import String, DateTime
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import DeclarativeBase, mapped_column, Mapped
+from datetime import datetime
 
 
 class Base(DeclarativeBase):
