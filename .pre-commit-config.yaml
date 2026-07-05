@@ -1,0 +1,39 @@
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check (staged files)
+        entry: uv run ruff check --fix
+        language: system
+        types: [python]
+        pass_filenames: true
+        require_serial: false
+
+      - id: ruff-format
+        name: ruff format (staged files)
+        entry: uv run ruff format
+        language: system
+        types: [python]
+        pass_filenames: true
+        require_serial: false
+
+      - id: pytest-regression
+        name: pytest (regression gate)
+        entry: uv run pytest -q
+        language: system
+        types: [python]
+        pass_filenames: false
+        require_serial: true
+        # Fails the commit if any test regresses. Includes golden snapshot
+        # tests, so silent codegen drift can't land. UPDATE_GOLDEN=1 skips
+        # on intentional updates (reviewer commits the golden diff).
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ["--maxkb=1024"]
+      - id: check-merge-conflict
