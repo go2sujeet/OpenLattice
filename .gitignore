@@ -4,3 +4,10 @@
 __pycache__/
 *.pyc
 /generated/
+editors/*
+
+# Per-developer skill/agent installs (regenerate via `npx skills add`)
+.agents/skills/
+.claude/skills/
+.claude/scheduled_tasks.lock
+skills-lock.json
