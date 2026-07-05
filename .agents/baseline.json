@@ -1,0 +1,14 @@
+{
+  "captured_at": "2026-07-04T16:35:00Z",
+  "branch": "main",
+  "commit": "28cfa1c",
+  "gate": {
+    "pytest": { "passed": 24, "failed": 0, "skipped": 0 },
+    "ruff": { "errors": 34, "fixable": 26, "notes": "pre-existing baseline; not introduced by harness" },
+    "basedpyright": { "errors": 40, "warnings": 285, "notes": "pre-existing baseline; not introduced by harness" }
+  },
+  "pinned": {
+    "pyproject": "openlattice 0.1.0",
+    "python": ">=3.12"
+  },
+  "policy": "This file is the regression anchor. Any new work that worsens pytest/ruff/basedpyright counts is a regression and blocks merge. Ruff/basedpyright counts may decrease as cleanup but never increase without an explicit exception in the commit body."

@@ -1,0 +1,47 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "command": {
+    "test": {
+      "template": "uv run pytest",
+      "description": "Run all tests"
+    },
+    "test-file": {
+      "template": "uv run pytest {file}",
+      "description": "Run tests in a specific file"
+    },
+    "lint": {
+      "template": "uv run ruff check",
+      "description": "Lint all Python files"
+    },
+    "format": {
+      "template": "uv run ruff format",
+      "description": "Format all Python files"
+    },
+    "typecheck": {
+      "template": "uv run basedpyright",
+      "description": "Type-check all Python files"
+    },
+    "plan": {
+      "template": "uv run openlattice plan {spec_file}",
+      "description": "Show execution plan for a .lattice spec"
+    },
+    "apply": {
+      "template": "uv run openlattice apply {spec_file}",
+      "description": "Generate FastAPI + SQLAlchemy code from a spec"
+    },
+    "lsp": {
+      "template": "uv run openlattice-lsp",
+      "description": "Start the LSP server for .lattice files"
+    },
+    "lsp-install": {
+      "template": "uv sync --group dev --extra lsp",
+      "description": "Install all dev + LSP dependencies (pygls, lsprotocol)"
+    }
+  },
+  "lsp": {
+    "lattice": {
+      "command": ["uv", "run", "openlattice-lsp"],
+      "extensions": [".lattice"]
+    }
+  }
+}
