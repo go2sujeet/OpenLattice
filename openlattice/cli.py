@@ -1,42 +1,54 @@
-import click
 from pathlib import Path
+from typing import Any, cast
+
+import click
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
 
-from openlattice.parser import parse_file, ParseError
-from openlattice.state import (
-    load_state, save_state, diff_spec_against_state,
-    build_new_state, _spec_resources, compute_spec_hash,
-)
 from openlattice.generators.fastapi_gen import generate as gen_fastapi
 from openlattice.generators.sqlalchemy_gen import generate as gen_sqlalchemy
+from openlattice.ir import LatticeSpec
+from openlattice.parser import ParseError, parse_file
+from openlattice.state import (
+    DiffResult,
+    ResourceState,
+    StateFile,
+    build_new_state,
+    diff_spec_against_state,
+    load_state,
+    save_state,
+    spec_resources,
+)
 
 console = Console()
 STATE_FILE = ".lattice-state.json"
 
 
-def _render_plan(diff, spec, state) -> Text:
+def _render_plan(diff: DiffResult, spec: LatticeSpec, state: StateFile) -> Text:
     t = Text()
-    current = {(r.type, r.label): r for r in state.resources}
-    all_res = {(rt, lb): attrs for rt, lb, attrs in _spec_resources(spec)}
+    current: dict[tuple[str, str], ResourceState] = {(r.type, r.label): r for r in state.resources}
+    all_res: dict[tuple[str, str], dict[str, Any]] = {
+        (rt, lb): attrs for rt, lb, attrs in spec_resources(spec)
+    }
 
     for (rt, lb), attrs in all_res.items():
         ref = f"{rt}.{lb}"
         if ref in diff.to_add:
-            t.append(f"\n  + resource \"{rt}\" \"{lb}\"", style="green")
+            t.append(f'\n  + resource "{rt}" "{lb}"', style="green")
             t.append("  # will be created\n", style="dim")
             for k, v in attrs.items():
                 if isinstance(v, dict):
-                    fields_str = ", ".join(f"{fk}: {fv}" for fk, fv in v.items())
+                    v_dict = cast(dict[str, str], v)
+                    fields_str = ", ".join(f"{fk}: {fv}" for fk, fv in v_dict.items())
                     t.append(f"      {k} = {{{fields_str}}}\n", style="green")
                 elif isinstance(v, list):
                     t.append(f"      {k} = {v}\n", style="green")
                 else:
-                    t.append(f"      {k} = \"{v}\"\n", style="green")
+                    t.append(f'      {k} = "{v}"\n', style="green")
         elif ref in diff.to_change:
             old = current[(rt, lb)].attributes
-            t.append(f"\n  ~ resource \"{rt}\" \"{lb}\"", style="yellow")
+            t.append(f'\n  ~ resource "{rt}" "{lb}"', style="yellow")
             t.append("  # will be updated\n", style="dim")
             for k in set(list(old.keys()) + list(attrs.keys())):
                 oval = old.get(k)
@@ -49,7 +61,7 @@ def _render_plan(diff, spec, state) -> Text:
 
     for ref in diff.to_destroy:
         rt, lb = ref.split(".", 1)
-        t.append(f"\n  - resource \"{rt}\" \"{lb}\"", style="red")
+        t.append(f'\n  - resource "{rt}" "{lb}"', style="red")
         t.append("  # will be destroyed\n", style="dim")
 
     nadd = len(diff.to_add)
@@ -89,7 +101,9 @@ def plan(spec_file: str):
     content.append("    → generated/main.py        FastAPI app + routes\n", style="cyan")
     content.append("    → generated/models.py      SQLAlchemy models\n", style="cyan")
     if diff.to_add or diff.to_change or diff.to_destroy:
-        content.append(f"\n  Run `openlattice apply {spec_file}` to perform these actions.", style="dim")
+        content.append(
+            f"\n  Run `openlattice apply {spec_file}` to perform these actions.", style="dim"
+        )
 
     console.print(Panel(content, title="OpenLattice Plan", border_style="blue"))
 
@@ -126,7 +140,9 @@ def apply(spec_file: str):
 
     new_state = build_new_state(spec, state)
     save_state(new_state, STATE_FILE)
-    console.print(f"\nDone. [bold]{len(files)}[/bold] files written. State updated (serial={new_state.serial}).")
+    console.print(
+        f"\nDone. [bold]{len(files)}[/bold] files written. State updated (serial={new_state.serial})."
+    )
 
 
 @cli.command()
