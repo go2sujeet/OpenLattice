@@ -5,10 +5,10 @@ from __future__ import annotations
 import re
 from typing import Optional
 
-from pygls.server import LanguageServer
 from lsprotocol import types
+from pygls.lsp.server import LanguageServer
 
-from openlattice.parser import parse_string, ParseError
+from openlattice.parser import ParseError, parse_string
 
 server = LanguageServer("openlattice-lsp", "v0.1.0")
 
@@ -60,7 +60,9 @@ def _publish_diagnostics(ls: LanguageServer, uri: str, text: str) -> None:
                 source="openlattice-lsp",
             )
         )
-    ls.publish_diagnostics(uri, diagnostics)
+    ls.text_document_publish_diagnostics(
+        types.PublishDiagnosticsParams(uri=uri, diagnostics=diagnostics)
+    )
 
 
 @server.feature(types.TEXT_DOCUMENT_DID_OPEN)
@@ -97,7 +99,6 @@ def _detect_context(line_text: str, char: int) -> str:
       "input_output"   — cursor is on input = ... or output = ... line
       "none"           — no specific completions
     """
-    prefix = line_text[:char].lstrip()
 
     # After: resource "
     if re.search(r'\bresource\s+"[^"]*$', line_text[:char]):
@@ -108,7 +109,7 @@ def _detect_context(line_text: str, char: int) -> str:
         return "method"
 
     # input = or output =
-    if re.search(r'\b(?:input|output)\s*=\s*', line_text[:char]):
+    if re.search(r"\b(?:input|output)\s*=\s*", line_text[:char]):
         return "input_output"
 
     # Inside a fields/payload block value: looks like `  key = "`
@@ -124,37 +125,34 @@ def _make_snippet(label: str, resource_type: str) -> str:
         "lattice_entity": (
             'lattice_entity" "${2:label}" {\n'
             '  name   = "${3:EntityName}"\n'
-            '  fields = {\n'
+            "  fields = {\n"
             '    id = "uuid"\n'
-            '  }\n'
-            '}'
+            "  }\n"
+            "}"
         ),
         "lattice_api": (
             'lattice_api" "${2:label}" {\n'
             '  name   = "${3:ApiName}"\n'
             '  method = "${4:POST}"\n'
             '  path   = "${5:/path}"\n'
-            '}'
+            "}"
         ),
         "lattice_event": (
             'lattice_event" "${2:label}" {\n'
             '  name    = "${3:EventName}"\n'
-            '  payload = {\n'
+            "  payload = {\n"
             '    id = "uuid"\n'
-            '  }\n'
-            '}'
+            "  }\n"
+            "}"
         ),
         "lattice_workflow": (
             'lattice_workflow" "${2:label}" {\n'
             '  name  = "${3:WorkflowName}"\n'
             '  steps = ["${4:step_one}"]\n'
-            '}'
+            "}"
         ),
         "lattice_queue": (
-            'lattice_queue" "${2:label}" {\n'
-            '  name    = "${3:queue_name}"\n'
-            '  retries = ${4:3}\n'
-            '}'
+            'lattice_queue" "${2:label}" {\n  name    = "${3:queue_name}"\n  retries = ${4:3}\n}'
         ),
     }
     return snippets.get(resource_type, resource_type)
@@ -234,9 +232,7 @@ def completion(
 
 
 @server.feature(types.TEXT_DOCUMENT_HOVER)
-def hover(
-    ls: LanguageServer, params: types.HoverParams
-) -> Optional[types.Hover]:
+def hover(ls: LanguageServer, params: types.HoverParams) -> Optional[types.Hover]:
     text = _get_document_text(ls, params.text_document.uri)
     if text is None:
         return None
