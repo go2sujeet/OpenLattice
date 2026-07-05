@@ -1,7 +1,8 @@
 """FastAPI generator for OpenLattice."""
 
 import re
-from openlattice.ir import LatticeSpec, EntityDef, ApiDef, FieldDef
+
+from openlattice.ir import ApiDef, EntityDef, LatticeSpec
 
 # DSL type → Python type annotation string
 _FIELD_TYPE_MAP: dict[str, str] = {
@@ -23,7 +24,11 @@ _IMPORT_TRIGGERS: dict[str, str] = {
 
 def _is_collection_endpoint(api: ApiDef) -> bool:
     """True for GET endpoints with no path params — these return a list."""
-    return api.method.upper() == "GET" and not _extract_path_params(api.path) and bool(api.output_entity)
+    return (
+        api.method.upper() == "GET"
+        and not _extract_path_params(api.path)
+        and bool(api.output_entity)
+    )
 
 
 def _to_snake_case(name: str) -> str:
@@ -77,7 +82,7 @@ def _generate_route(api: ApiDef, entities: list[EntityDef]) -> list[str]:
         rm = f"List[{api.output_entity}]" if is_collection else api.output_entity
         response_model_part = f", response_model={rm}"
 
-    lines.append(f"@router.{method}(\"{api.path}\"{response_model_part})")
+    lines.append(f'@router.{method}("{api.path}"{response_model_part})')
 
     # Build parameter list
     params: list[str] = []
@@ -138,17 +143,26 @@ def generate(spec: LatticeSpec) -> str:
 
     has_collection = any(_is_collection_endpoint(api) for api in spec.apis)
 
-    # Imports
-    import_lines: list[str] = [
-        "from fastapi import FastAPI, APIRouter",
+    # Imports — stdlib first, then third-party (PEP 8)
+    import_stdlib: list[str] = []
+    if "UUID" in needed_types:
+        import_stdlib.append("from uuid import UUID")
+    if "datetime" in needed_types:
+        import_stdlib.append("from datetime import datetime")
+    if has_collection:
+        import_stdlib.append("from typing import List")
+    import_stdlib.sort()
+
+    import_thirdparty: list[str] = [
+        "from fastapi import APIRouter, FastAPI",
         "from pydantic import BaseModel",
     ]
-    if has_collection:
-        import_lines.append("from typing import List")
-    if "UUID" in needed_types:
-        import_lines.append("from uuid import UUID")
-    if "datetime" in needed_types:
-        import_lines.append("from datetime import datetime")
+
+    import_lines: list[str] = []
+    if import_stdlib:
+        import_lines.extend(import_stdlib)
+        import_lines.append("")
+    import_lines.extend(import_thirdparty)
 
     sections.append("\n".join(import_lines))
 
@@ -170,4 +184,4 @@ def generate(spec: LatticeSpec) -> str:
     sections.append("app.include_router(router)")
 
     # Join with double newlines between top-level blocks
-    return "\n\n\n".join(sections) + "\n"
+    return "\n\n".join(sections) + "\n"

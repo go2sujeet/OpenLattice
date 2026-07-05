@@ -2,9 +2,10 @@
 
 
 import uuid
-from sqlalchemy import Integer, Float, String
+
+from sqlalchemy import Float, Integer, String
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import DeclarativeBase, mapped_column, Mapped
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
 class Base(DeclarativeBase):
