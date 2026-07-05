@@ -11,3 +11,6 @@ editors/*
 .claude/skills/
 .claude/scheduled_tasks.lock
 skills-lock.json
+
+# Generated artifacts
+validation-report.html
