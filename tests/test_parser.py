@@ -71,7 +71,42 @@ resource "lattice_workflow" "checkout" {
     spec = parse_string(src)
     assert len(spec.workflows) == 1
     assert spec.workflows[0].name == "Checkout"
-    assert spec.workflows[0].steps == ["validate_order", "charge_customer"]
+    assert [s.name for s in spec.workflows[0].steps] == ["validate_order", "charge_customer"]
+    assert spec.workflows[0].steps[0].input is None
+    assert spec.workflows[0].trigger is None
+
+
+def test_parse_workflow_steps_with_io():
+    src = """
+resource "lattice_workflow" "checkout" {
+  name    = "Checkout"
+  trigger = "OrderCreated"
+  steps = [
+    { name = "validate_cart" input = "Cart" output = "Cart" }
+    { name = "charge_payment" input = "Cart" output = "Payment" on_error = "refund" }
+  ]
+}
+"""
+    spec = parse_string(src)
+    w = spec.workflows[0]
+    assert w.trigger == "OrderCreated"
+    assert w.steps[0].name == "validate_cart"
+    assert w.steps[0].input == "Cart"
+    assert w.steps[0].output == "Cart"
+    assert w.steps[0].on_error is None
+    assert w.steps[1].on_error == "refund"
+
+
+def test_parse_workflow_step_missing_name_raises():
+    src = """
+resource "lattice_workflow" "checkout" {
+  name  = "Checkout"
+  steps = [{ input = "Cart" }]
+}
+"""
+    with pytest.raises(ParseError) as exc:
+        parse_string(src)
+    assert "name" in str(exc.value).lower()
 
 
 def test_parse_queue():
@@ -85,6 +120,85 @@ resource "lattice_queue" "emails" {
     assert len(spec.queues) == 1
     assert spec.queues[0].name == "emails"
     assert spec.queues[0].retries == 3
+    assert spec.queues[0].message_type is None
+    assert spec.queues[0].dlq is False
+
+
+def test_parse_queue_message_type_and_dlq():
+    src = """
+resource "lattice_queue" "emails" {
+  name         = "emails"
+  message_type = "OrderCreated"
+  retries      = 5
+  dlq          = true
+}
+"""
+    spec = parse_string(src)
+    q = spec.queues[0]
+    assert q.message_type == "OrderCreated"
+    assert q.retries == 5
+    assert q.dlq is True
+
+
+def test_parse_api_publishes_and_crud_operation():
+    src = """
+resource "lattice_entity" "order" {
+  name = "Order"
+  fields = { id = "uuid" }
+}
+resource "lattice_api" "create_order" {
+  name      = "CreateOrder"
+  method    = "POST"
+  path      = "/orders"
+  input     = lattice_entity.order.name
+  output    = lattice_entity.order.name
+  publishes = ["OrderCreated"]
+}
+resource "lattice_api" "get_order" {
+  name   = "GetOrder"
+  method = "GET"
+  path   = "/orders/{id}"
+  output = lattice_entity.order.name
+}
+resource "lattice_api" "list_orders" {
+  name   = "ListOrders"
+  method = "GET"
+  path   = "/orders"
+  output = lattice_entity.order.name
+}
+"""
+    spec = parse_string(src)
+    create, get, list_ = spec.apis
+    assert create.publishes == ["OrderCreated"]
+    assert create.crud_operation == "create"
+    assert get.crud_operation == "read"
+    assert list_.crud_operation == "list"
+
+
+def test_event_published_by_and_consumed_by_linked():
+    src = """
+resource "lattice_event" "order_created" {
+  name = "OrderCreated"
+  payload = { order_id = "uuid" }
+}
+resource "lattice_workflow" "checkout" {
+  name  = "Checkout"
+  steps = [{ name = "create_order" output = "OrderCreated" }]
+}
+resource "lattice_workflow" "send_receipt" {
+  name    = "SendReceipt"
+  trigger = "OrderCreated"
+  steps   = ["send_email"]
+}
+resource "lattice_queue" "notifications" {
+  name         = "notifications"
+  message_type = "OrderCreated"
+}
+"""
+    spec = parse_string(src)
+    event = spec.events[0]
+    assert event.published_by == ["Checkout"]
+    assert event.consumed_by == ["SendReceipt", "notifications"]
 
 
 def test_parse_comment():

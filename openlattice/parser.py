@@ -6,7 +6,16 @@ import re
 from dataclasses import dataclass
 from typing import Any, cast
 
-from openlattice.ir import ApiDef, EntityDef, EventDef, FieldDef, LatticeSpec, QueueDef, WorkflowDef
+from openlattice.ir import (
+    ApiDef,
+    EntityDef,
+    EventDef,
+    FieldDef,
+    LatticeSpec,
+    QueueDef,
+    WorkflowDef,
+    WorkflowStep,
+)
 
 _KIND_LABELS = {
     "LBRACE": '"{{"',
@@ -28,6 +37,53 @@ _VALID_RESOURCE_TYPES = {
 }
 _VALID_FIELD_TYPES = {"uuid", "int", "float", "string", "bool", "datetime", "json"}
 _VALID_METHODS = {"GET", "POST", "PUT", "DELETE", "PATCH"}
+
+
+def _infer_crud_operation(method: str, path: str) -> str | None:
+    """Infer CRUD semantics from HTTP method + path shape (has a path param or not)."""
+    has_path_param = "{" in path
+    method = method.upper()
+    if method == "GET":
+        return "read" if has_path_param else "list"
+    if method == "POST":
+        return "create"
+    if method in ("PUT", "PATCH"):
+        return "update"
+    if method == "DELETE":
+        return "delete"
+    return None
+
+
+def _to_bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.lower() == "true"
+    return bool(value)
+
+
+def _link_relationships(spec: LatticeSpec) -> None:
+    """Derive EventDef.published_by / consumed_by from workflow/api/queue references.
+
+    Publishers: workflow steps whose output is the event's name, and APIs that
+    list the event in `publishes`.
+    Consumers: workflows triggered by the event, and queues carrying it as
+    their message_type.
+    """
+    for event in spec.events:
+        for workflow in spec.workflows:
+            if any(step.output == event.name for step in workflow.steps):
+                if workflow.name not in event.published_by:
+                    event.published_by.append(workflow.name)
+            if workflow.trigger == event.name:
+                if workflow.name not in event.consumed_by:
+                    event.consumed_by.append(workflow.name)
+        for api in spec.apis:
+            if event.name in api.publishes and api.name not in event.published_by:
+                event.published_by.append(api.name)
+        for queue in spec.queues:
+            if queue.message_type == event.name and queue.name not in event.consumed_by:
+                event.consumed_by.append(queue.name)
 
 
 class ParseError(Exception):
@@ -211,12 +267,18 @@ class _Parser:
                 f"Invalid method '{method}' in api '{name}'. Valid: {', '.join(_VALID_METHODS)}",
                 line,
             )
+        raw_publishes = attrs.get("publishes", [])
+        if not isinstance(raw_publishes, list):
+            raise ParseError(f"lattice_api '{label}' publishes must be a list", line)
+        publishes = cast(list[str], raw_publishes)
         return ApiDef(
             name=name,
             method=method.upper(),
             path=path,
             input_entity=attrs.get("input") or None,
             output_entity=attrs.get("output") or None,
+            publishes=publishes,
+            crud_operation=_infer_crud_operation(method.upper(), path),
         )
 
     def _build_event(self, label: str, attrs: dict[str, Any], line: int) -> EventDef:
@@ -236,20 +298,45 @@ class _Parser:
 
     def _build_workflow(self, label: str, attrs: dict[str, Any], line: int) -> WorkflowDef:
         name = attrs.get("name")
-        steps = attrs.get("steps", [])
+        raw_steps = attrs.get("steps", [])
         if not name:
             raise ParseError(f"lattice_workflow '{label}' missing 'name'", line)
-        if not isinstance(steps, list):
+        if not isinstance(raw_steps, list):
             raise ParseError(f"lattice_workflow '{label}' steps must be a list", line)
-        steps_list = cast(list[str], steps)
-        return WorkflowDef(name=name, steps=steps_list)
+        steps: list[WorkflowStep] = []
+        for raw_step in cast(list[Any], raw_steps):
+            if isinstance(raw_step, str):
+                steps.append(WorkflowStep(name=raw_step))
+            elif isinstance(raw_step, dict):
+                step_dict = cast(dict[str, str], raw_step)
+                step_name = step_dict.get("name")
+                if not step_name:
+                    raise ParseError(f"lattice_workflow '{label}' step missing 'name'", line)
+                steps.append(
+                    WorkflowStep(
+                        name=step_name,
+                        input=step_dict.get("input") or None,
+                        output=step_dict.get("output") or None,
+                        on_error=step_dict.get("on_error") or None,
+                    )
+                )
+            else:
+                raise ParseError(
+                    f"lattice_workflow '{label}' step must be a string or object", line
+                )
+        return WorkflowDef(name=name, steps=steps, trigger=attrs.get("trigger") or None)
 
     def _build_queue(self, label: str, attrs: dict[str, Any], line: int) -> QueueDef:
         name = attrs.get("name")
         if not name:
             raise ParseError(f"lattice_queue '{label}' missing 'name'", line)
         retries = attrs.get("retries", 3)
-        return QueueDef(name=name, retries=int(retries))
+        return QueueDef(
+            name=name,
+            message_type=attrs.get("message_type") or None,
+            retries=int(retries),
+            dlq=_to_bool(attrs.get("dlq", False)),
+        )
 
     def _first_pass(self):
         """Collect (type, label) -> name for reference resolution."""
@@ -315,6 +402,7 @@ class _Parser:
                 spec.workflows.append(self._build_workflow(label, attrs, line))
             elif res_type == "lattice_queue":
                 spec.queues.append(self._build_queue(label, attrs, line))
+        _link_relationships(spec)
         return spec
 
 

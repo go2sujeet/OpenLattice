@@ -57,6 +57,8 @@ def _api_attrs(a: ApiDef) -> dict[str, Any]:
         d["input"] = a.input_entity
     if a.output_entity:
         d["output"] = a.output_entity
+    if a.publishes:
+        d["publishes"] = a.publishes
     return d
 
 
@@ -65,11 +67,25 @@ def _event_attrs(e: EventDef) -> dict[str, Any]:
 
 
 def _workflow_attrs(w: WorkflowDef) -> dict[str, Any]:
-    return {"name": w.name, "steps": w.steps}
+    d: dict[str, Any] = {
+        "name": w.name,
+        "steps": [
+            {"name": s.name, "input": s.input, "output": s.output, "on_error": s.on_error}
+            for s in w.steps
+        ],
+    }
+    if w.trigger:
+        d["trigger"] = w.trigger
+    return d
 
 
 def _queue_attrs(q: QueueDef) -> dict[str, Any]:
-    return {"name": q.name, "retries": q.retries}
+    d: dict[str, Any] = {"name": q.name, "retries": q.retries}
+    if q.message_type:
+        d["message_type"] = q.message_type
+    if q.dlq:
+        d["dlq"] = q.dlq
+    return d
 
 
 def spec_resources(spec: LatticeSpec) -> list[tuple[str, str, dict[str, Any]]]:
