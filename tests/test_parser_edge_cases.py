@@ -75,7 +75,11 @@ resource "lattice_queue" "welcome_email" {
     assert spec.apis[0].output_entity == "User"
     assert spec.events[0].name == "UserLogin"
     assert spec.workflows[0].name == "Onboarding"
-    assert spec.workflows[0].steps == ["send_welcome", "setup_profile", "notify_admin"]
+    assert [s.name for s in spec.workflows[0].steps] == [
+        "send_welcome",
+        "setup_profile",
+        "notify_admin",
+    ]
     assert spec.queues[0].name == "welcome_email"
     assert spec.queues[0].retries == 3
 
@@ -123,15 +127,20 @@ def test_2():
 # Test 3: Arrays with mixed types
 # ---------------------------------------------------------------------------
 def test_3():
+    """Mixed-type array parsing, exercised via lattice_api.publishes (a loosely-typed
+    list attribute) — workflow.steps is now structurally validated (see IR enrichment,
+    issue #8), so it's no longer the right vehicle for testing raw array/value parsing."""
     src = '''
-resource "lattice_workflow" "mixed" {
-  name  = "MixedWorkflow"
-  steps = ["alpha", 42, "beta", 3.14, "gamma", 0]
+resource "lattice_api" "mixed" {
+  name      = "Mixed"
+  method    = "POST"
+  path      = "/mixed"
+  publishes = ["alpha", 42, "beta", 3.14, "gamma", 0]
 }
 '''
     spec = parse_string(src)
-    steps = spec.workflows[0].steps
-    assert len(steps) == 6, f"Expected 6 steps, got {len(steps)}"
+    steps = spec.apis[0].publishes
+    assert len(steps) == 6, f"Expected 6 items, got {len(steps)}"
     assert steps[0] == "alpha", f"Expected 'alpha', got {steps[0]}"
     assert steps[1] == 42, f"Expected 42, got {steps[1]}"
     assert isinstance(steps[1], int), f"steps[1] is {type(steps[1]).__name__}, expected int"
@@ -225,14 +234,17 @@ resource "lattice_entity" "bare" {
 # Test 7: Int and float number parsing
 # ---------------------------------------------------------------------------
 def test_7():
+    """See test_3 docstring: numeric array values exercised via publishes, not steps."""
     src = '''
-resource "lattice_workflow" "num_test" {
-  name  = "NumTest"
-  steps = [3.14, 2.718, 1.0, 100, 0, 999999]
+resource "lattice_api" "num_test" {
+  name      = "NumTest"
+  method    = "POST"
+  path      = "/num-test"
+  publishes = [3.14, 2.718, 1.0, 100, 0, 999999]
 }
 '''
     spec = parse_string(src)
-    steps = spec.workflows[0].steps
+    steps = spec.apis[0].publishes
     assert steps[0] == 3.14
     assert isinstance(steps[0], float), f"Expected float, got {type(steps[0]).__name__}"
     assert steps[1] == 2.718
