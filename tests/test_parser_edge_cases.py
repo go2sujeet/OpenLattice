@@ -6,9 +6,9 @@ import traceback
 
 sys.path.insert(0, ".")
 
-from openlattice.parser import parse_string, ParseError
 from openlattice.generators.fastapi_gen import generate as fastapi_generate
 from openlattice.generators.sqlalchemy_gen import generate as sqlalchemy_generate
+from openlattice.parser import parse_string
 
 results = []
 
@@ -17,7 +17,7 @@ def run_test(number, name, fn):
     try:
         fn()
         results.append((number, name, "PASS"))
-        print(f"  PASS")
+        print("  PASS")
     except Exception as e:
         results.append((number, name, "FAIL"))
         print(f"  FAIL: {e}")
@@ -150,7 +150,7 @@ resource "lattice_api" "mixed" {
     assert steps[4] == "gamma"
     assert steps[5] == 0, f"Expected 0, got {steps[5]}"
     assert isinstance(steps[5], int), f"steps[5] is {type(steps[5]).__name__}, expected int"
-    print(f"        Mixed array types verified: str, int, str, float, str, int")
+    print("        Mixed array types verified: str, int, str, float, str, int")
 
 
 # ---------------------------------------------------------------------------
@@ -308,10 +308,10 @@ resource "lattice_api" "list_posts" {
     spec = parse_string(src)
     code = fastapi_generate(spec)
     try:
-        tree = ast.parse(code)
+        ast.parse(code)
         print(f"        FastAPI generated {len(code)} bytes, AST is valid")
-    except SyntaxError as e:
-        print(f"        SyntaxError in generated code (first 500 chars):")
+    except SyntaxError:
+        print("        SyntaxError in generated code (first 500 chars):")
         print(f"        {code[:500]}")
         raise
 
@@ -352,10 +352,10 @@ resource "lattice_entity" "product" {
     spec = parse_string(src)
     code = sqlalchemy_generate(spec)
     try:
-        tree = ast.parse(code)
+        ast.parse(code)
         print(f"        SQLAlchemy generated {len(code)} bytes, AST is valid")
-    except SyntaxError as e:
-        print(f"        SyntaxError in generated code (first 500 chars):")
+    except SyntaxError:
+        print("        SyntaxError in generated code (first 500 chars):")
         print(f"        {code[:500]}")
         raise
 
