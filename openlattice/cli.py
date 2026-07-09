@@ -6,6 +6,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
 
+from openlattice.generators.events_gen import generate as gen_events
 from openlattice.generators.fastapi_gen import generate as gen_fastapi
 from openlattice.generators.sqlalchemy_gen import generate as gen_sqlalchemy
 from openlattice.ir import LatticeSpec
@@ -134,6 +135,8 @@ def apply(spec_file: str):
         out_dir / "main.py": gen_fastapi(spec),
         out_dir / "models.py": gen_sqlalchemy(spec),
     }
+    if spec.events:
+        files[out_dir / "events.py"] = gen_events(spec)
     for path, content in files.items():
         path.write_text(content)
         console.print(f"  [green]✓[/green] {path}")
