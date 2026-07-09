@@ -1,6 +1,6 @@
 [project]
 name = "openlattice"
-version = "0.1.0"
+version = "0.2.0"
 description = "Declarative application specification compiler — Terraform-style DSL for FastAPI and SQLAlchemy"
 readme = "README.md"
 license = { text = "MIT" }
