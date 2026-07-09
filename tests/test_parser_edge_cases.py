@@ -3,6 +3,7 @@
 import ast
 import sys
 import traceback
+from collections.abc import Callable
 
 sys.path.insert(0, ".")
 
@@ -12,10 +13,10 @@ from openlattice.generators.schemas_gen import generate as schemas_generate
 from openlattice.generators.sqlalchemy_gen import generate as sqlalchemy_generate
 from openlattice.parser import parse_string
 
-results = []
+results: list[tuple[int, str, str]] = []
 
 
-def run_test(number, name, fn):
+def run_test(number: int, name: str, fn: Callable[[], None]) -> None:
     print(f"\n--- Test {number}: {name} ---")
     try:
         fn()

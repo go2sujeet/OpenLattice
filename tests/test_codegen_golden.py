@@ -16,6 +16,7 @@ generator changes are always reviewer-visible.
 from __future__ import annotations
 
 import os
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -27,6 +28,7 @@ from openlattice.generators.routes_gen import generate as gen_routes
 from openlattice.generators.schemas_gen import generate as gen_schemas
 from openlattice.generators.sqlalchemy_gen import generate as gen_sqlalchemy
 from openlattice.generators.workflow_gen import generate as gen_workflows
+from openlattice.ir import LatticeSpec
 from openlattice.parser import parse_file, parse_string
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -34,7 +36,7 @@ GOLDEN_DIR = REPO_ROOT / "tests" / "golden"
 UPDATE = os.environ.get("UPDATE_GOLDEN") == "1"
 
 
-def _snapshot(spec_file: Path, gen_fn, golden_file: Path) -> None:
+def _snapshot(spec_file: Path, gen_fn: Callable[[LatticeSpec], str], golden_file: Path) -> None:
     spec = parse_file(str(spec_file))
     actual = gen_fn(spec)
     golden_path = GOLDEN_DIR / golden_file
