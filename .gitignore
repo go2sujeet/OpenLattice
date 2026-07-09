@@ -14,3 +14,9 @@ skills-lock.json
 
 # Generated artifacts
 validation-report.html
+
+# Go build artifacts (terraform-provider-openlattice/)
+/terraform-provider-openlattice/terraform-provider-openlattice
+*.exe
+*.test
+/terraform-provider-openlattice/dist/
