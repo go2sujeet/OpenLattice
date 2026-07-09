@@ -20,6 +20,7 @@ from pathlib import Path
 
 import pytest
 
+from openlattice.generators.events_gen import generate as gen_events
 from openlattice.generators.fastapi_gen import generate as gen_fastapi
 from openlattice.generators.queue_gen import generate as gen_queues
 from openlattice.generators.sqlalchemy_gen import generate as gen_sqlalchemy
@@ -101,6 +102,22 @@ def test_sqlalchemy_golden_deterministic() -> None:
     first = gen_sqlalchemy(spec)
     second = gen_sqlalchemy(spec)
     assert first == second, "SQLAlchemy generator is non-deterministic"
+
+
+def test_events_golden_ecommerce() -> None:
+    _snapshot(
+        REPO_ROOT / "examples" / "ecommerce" / "ecommerce.lattice",
+        gen_events,
+        Path("ecommerce_events.py"),
+    )
+
+
+def test_events_golden_deterministic() -> None:
+    """Generator must be pure: same spec in -> same bytes out, twice."""
+    spec = parse_file(str(REPO_ROOT / "examples" / "ecommerce" / "ecommerce.lattice"))
+    first = gen_events(spec)
+    second = gen_events(spec)
+    assert first == second, "Events generator is non-deterministic"
 
 
 def test_workflow_golden_ecommerce() -> None:

@@ -6,6 +6,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
 
+from openlattice.generators.events_gen import generate as gen_events
 from openlattice.generators.fastapi_gen import generate as gen_fastapi
 from openlattice.generators.queue_gen import generate as gen_queues
 from openlattice.generators.sqlalchemy_gen import generate as gen_sqlalchemy
@@ -185,6 +186,8 @@ def apply(spec_file: str, output_dir: str | None, state_file: str | None):
         out_dir / "main.py": gen_fastapi(spec),
         out_dir / "models.py": gen_sqlalchemy(spec),
     }
+    if spec.events:
+        files[out_dir / "events.py"] = gen_events(spec)
     if spec.workflows:
         files[out_dir / "workflows.py"] = gen_workflows(spec)
     if spec.queues:
