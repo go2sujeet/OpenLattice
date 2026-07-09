@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from openlattice.ir import ApiDef, EntityDef, FieldDef, LatticeSpec
+from openlattice.ir import ApiDef, ConnectorDef, EntityDef, FieldDef, LatticeSpec
 from openlattice.state import (
     ResourceState,
     StateFile,
@@ -40,6 +40,23 @@ def test_diff_empty_state_all_new():
     result = diff_spec_against_state(spec, state)
     assert "lattice_entity.order" in result.to_add
     assert "lattice_api.create_order" in result.to_add
+    assert result.to_change == []
+    assert result.to_destroy == []
+
+
+def test_diff_empty_state_all_new_with_connector():
+    spec = LatticeSpec(
+        connectors=[
+            ConnectorDef(
+                name="SlackNotify",
+                kind="http_webhook",
+                url="https://hooks.slack.com/services/T000/B000/XXXX",
+            )
+        ]
+    )
+    state = StateFile(resources=[])
+    result = diff_spec_against_state(spec, state)
+    assert "lattice_connector.slack_notify" in result.to_add
     assert result.to_change == []
     assert result.to_destroy == []
 

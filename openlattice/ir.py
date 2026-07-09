@@ -56,9 +56,20 @@ class QueueDef:
 
 
 @dataclass
+class ConnectorDef:
+    name: str
+    kind: str  # "http_webhook" (only valid value for now)
+    url: str
+    method: str = "POST"
+    headers: dict[str, str] = field(default_factory=dict)
+    body_template: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
 class LatticeSpec:
     entities: list[EntityDef] = field(default_factory=list)
     apis: list[ApiDef] = field(default_factory=list)
     events: list[EventDef] = field(default_factory=list)
     workflows: list[WorkflowDef] = field(default_factory=list)
     queues: list[QueueDef] = field(default_factory=list)
+    connectors: list[ConnectorDef] = field(default_factory=list)
