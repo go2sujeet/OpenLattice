@@ -7,7 +7,15 @@ import uuid as _uuid_mod
 from dataclasses import dataclass, field
 from typing import Any
 
-from openlattice.ir import ApiDef, EntityDef, EventDef, LatticeSpec, QueueDef, WorkflowDef
+from openlattice.ir import (
+    ApiDef,
+    ConnectorDef,
+    EntityDef,
+    EventDef,
+    LatticeSpec,
+    QueueDef,
+    WorkflowDef,
+)
 
 
 @dataclass
@@ -88,6 +96,15 @@ def _queue_attrs(q: QueueDef) -> dict[str, Any]:
     return d
 
 
+def _connector_attrs(c: ConnectorDef) -> dict[str, Any]:
+    d: dict[str, Any] = {"name": c.name, "kind": c.kind, "url": c.url, "method": c.method}
+    if c.headers:
+        d["headers"] = c.headers
+    if c.body_template:
+        d["body_template"] = c.body_template
+    return d
+
+
 def spec_resources(spec: LatticeSpec) -> list[tuple[str, str, dict[str, Any]]]:
     """Return (type, label, attributes) for every resource in the spec."""
     resources: list[tuple[str, str, dict[str, Any]]] = []
@@ -101,6 +118,8 @@ def spec_resources(spec: LatticeSpec) -> list[tuple[str, str, dict[str, Any]]]:
         resources.append(("lattice_workflow", _to_label(w.name), _workflow_attrs(w)))
     for q in spec.queues:
         resources.append(("lattice_queue", _to_label(q.name), _queue_attrs(q)))
+    for c in spec.connectors:
+        resources.append(("lattice_connector", _to_label(c.name), _connector_attrs(c)))
     return resources
 
 
