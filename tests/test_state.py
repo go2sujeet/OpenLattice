@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from openlattice.ir import ApiDef, ConnectorDef, EntityDef, FieldDef, LatticeSpec
+from openlattice.ir import AgentDef, ApiDef, ConnectorDef, EntityDef, FieldDef, LatticeSpec
 from openlattice.state import (
     ResourceState,
     StateFile,
@@ -57,6 +57,23 @@ def test_diff_empty_state_all_new_with_connector():
     state = StateFile(resources=[])
     result = diff_spec_against_state(spec, state)
     assert "lattice_connector.slack_notify" in result.to_add
+    assert result.to_change == []
+    assert result.to_destroy == []
+
+
+def test_diff_empty_state_all_new_with_agent():
+    spec = LatticeSpec(
+        agents=[
+            AgentDef(
+                name="SupportTriage",
+                model="openai:gpt-4o",
+                system_prompt="Triage incoming support tickets and route them.",
+            )
+        ]
+    )
+    state = StateFile(resources=[])
+    result = diff_spec_against_state(spec, state)
+    assert "lattice_agent.support_triage" in result.to_add
     assert result.to_change == []
     assert result.to_destroy == []
 

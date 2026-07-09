@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import Any, cast
 
 from openlattice.ir import (
+    AgentDef,
     ApiDef,
     ConnectorDef,
     EntityDef,
@@ -36,6 +37,7 @@ _VALID_RESOURCE_TYPES = {
     "lattice_workflow",
     "lattice_queue",
     "lattice_connector",
+    "lattice_agent",
 }
 _VALID_FIELD_TYPES = {"uuid", "int", "float", "string", "bool", "datetime", "json"}
 _VALID_METHODS = {"GET", "POST", "PUT", "DELETE", "PATCH"}
@@ -94,6 +96,28 @@ class ParseError(Exception):
         self.message = message
         self.line = line
         super().__init__(f"Line {line}: {message}" if line else message)
+
+
+def _validate_agents(spec: LatticeSpec) -> None:
+    """Verify each AgentDef's tools/output_type reference known resources.
+
+    `tools` entries must match the `.name` of a defined ApiDef or ConnectorDef.
+    `output_type`, if set, must match the `.name` of a defined EntityDef.
+    """
+    known_tool_names = {a.name for a in spec.apis} | {c.name for c in spec.connectors}
+    known_entity_names = {e.name for e in spec.entities}
+    for agent in spec.agents:
+        for tool in agent.tools:
+            if tool not in known_tool_names:
+                raise ParseError(
+                    f"lattice_agent '{agent.name}' references unknown tool '{tool}' — "
+                    f"no lattice_api or lattice_connector named '{tool}'"
+                )
+        if agent.output_type is not None and agent.output_type not in known_entity_names:
+            raise ParseError(
+                f"lattice_agent '{agent.name}' references unknown output_type "
+                f"'{agent.output_type}' — no lattice_entity named '{agent.output_type}'"
+            )
 
 
 @dataclass
@@ -382,6 +406,28 @@ class _Parser:
             body_template=cast(dict[str, str], raw_body_template),
         )
 
+    def _build_agent(self, label: str, attrs: dict[str, Any], line: int) -> AgentDef:
+        name = attrs.get("name")
+        if not name:
+            raise ParseError(f"lattice_agent '{label}' missing 'name'", line)
+        model = attrs.get("model")
+        if not model:
+            raise ParseError(f"lattice_agent '{label}' missing 'model'", line)
+        system_prompt = attrs.get("system_prompt")
+        if not system_prompt:
+            raise ParseError(f"lattice_agent '{label}' missing 'system_prompt'", line)
+        raw_tools = attrs.get("tools", [])
+        if not isinstance(raw_tools, list):
+            raise ParseError(f"lattice_agent '{label}' tools must be a list", line)
+        tools = cast(list[str], raw_tools)
+        return AgentDef(
+            name=name,
+            model=model,
+            system_prompt=system_prompt,
+            output_type=attrs.get("output_type") or None,
+            tools=tools,
+        )
+
     def _first_pass(self):
         """Collect (type, label) -> name for reference resolution."""
         saved = self._pos
@@ -448,7 +494,10 @@ class _Parser:
                 spec.queues.append(self._build_queue(label, attrs, line))
             elif res_type == "lattice_connector":
                 spec.connectors.append(self._build_connector(label, attrs, line))
+            elif res_type == "lattice_agent":
+                spec.agents.append(self._build_agent(label, attrs, line))
         _link_relationships(spec)
+        _validate_agents(spec)
         return spec
 
 
@@ -474,3 +523,4 @@ if __name__ == "__main__":
     print(f"Workflows: {[w.name for w in spec.workflows]}")
     print(f"Queues:    {[q.name for q in spec.queues]}")
     print(f"Connectors: {[c.name for c in spec.connectors]}")
+    print(f"Agents:    {[ag.name for ag in spec.agents]}")
