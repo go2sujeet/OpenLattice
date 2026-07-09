@@ -7,6 +7,7 @@ from rich.panel import Panel
 from rich.text import Text
 
 from openlattice.generators.app_gen import generate as gen_app
+from openlattice.generators.connectors_gen import generate as gen_connectors
 from openlattice.generators.events_gen import generate as gen_events
 from openlattice.generators.queue_gen import generate as gen_queues
 from openlattice.generators.routes_gen import generate as gen_routes
@@ -194,6 +195,8 @@ def apply(spec_file: str, output_dir: str | None, state_file: str | None):
     }
     if spec.events:
         files[out_dir / "events.py"] = gen_events(spec)
+    if spec.connectors:
+        files[out_dir / "connectors.py"] = gen_connectors(spec)
     if spec.workflows:
         files[out_dir / "workflows.py"] = gen_workflows(spec)
     if spec.queues:
