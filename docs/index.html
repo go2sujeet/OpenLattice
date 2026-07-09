@@ -505,6 +505,7 @@
   <button class="btn-preset active" data-preset="ecommerce">📦 E-Commerce</button>
   <button class="btn-preset" data-preset="blog">📝 Blog</button>
   <button class="btn-preset" data-preset="tasks">✅ Tasks</button>
+  <button class="btn-preset" data-preset="ipaas">🔌 iPaaS</button>
   <button class="btn-preset" data-preset="custom">✏️ Custom</button>
 </div>
 
@@ -763,6 +764,58 @@ resource "lattice_workflow" "complete_task" {
     "emit_task_completed",
     "notify_user"
   ]
+}`,
+
+  ipaas: `resource "lattice_entity" "lead" {
+  name = "Lead"
+  fields = {
+    id     = "uuid"
+    email  = "string"
+    source = "string"
+  }
+}
+
+resource "lattice_api" "receive_lead_webhook" {
+  name   = "ReceiveLeadWebhook"
+  method = "POST"
+  path   = "/webhooks/lead"
+  input  = "Lead"
+}
+
+resource "lattice_event" "lead_received" {
+  name = "LeadReceived"
+  payload = {
+    id     = "uuid"
+    email  = "string"
+    source = "string"
+  }
+}
+
+resource "lattice_connector" "slack_notify" {
+  name   = "SlackNotify"
+  kind   = "http_webhook"
+  url    = "https://hooks.slack.com/services/PLACEHOLDER"
+  method = "POST"
+  body_template = {
+    text = "New lead: {{ email }}"
+  }
+}
+
+resource "lattice_workflow" "process_lead" {
+  name    = "ProcessLead"
+  trigger = "LeadReceived"
+  steps = [
+    "validate_lead",
+    "enrich_lead",
+    "slack_notify"
+  ]
+}
+
+resource "lattice_queue" "lead_processing" {
+  name         = "lead_processing"
+  message_type = "LeadReceived"
+  retries      = 5
+  dlq          = true
 }`,
 
   custom: ''
