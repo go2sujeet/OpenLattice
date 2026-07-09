@@ -66,6 +66,15 @@ class ConnectorDef:
 
 
 @dataclass
+class AgentDef:
+    name: str
+    model: str
+    system_prompt: str
+    output_type: str | None = None
+    tools: list[str] = field(default_factory=list)
+
+
+@dataclass
 class LatticeSpec:
     entities: list[EntityDef] = field(default_factory=list)
     apis: list[ApiDef] = field(default_factory=list)
@@ -73,3 +82,4 @@ class LatticeSpec:
     workflows: list[WorkflowDef] = field(default_factory=list)
     queues: list[QueueDef] = field(default_factory=list)
     connectors: list[ConnectorDef] = field(default_factory=list)
+    agents: list[AgentDef] = field(default_factory=list)

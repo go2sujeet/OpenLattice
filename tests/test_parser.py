@@ -415,3 +415,124 @@ resource "lattice_api" "bad" {
     with pytest.raises(ParseError) as exc:
         parse_string(src)
     assert ".id" in str(exc.value) or "name" in str(exc.value).lower()
+
+
+def test_parse_agent():
+    src = """
+resource "lattice_entity" "ticket_classification" {
+  name = "TicketClassification"
+  fields = { label = "string" }
+}
+
+resource "lattice_api" "get_ticket" {
+  name   = "GetTicket"
+  method = "GET"
+  path   = "/tickets/{id}"
+}
+
+resource "lattice_connector" "slack_notify" {
+  name = "SlackNotify"
+  kind = "http_webhook"
+  url  = "https://hooks.slack.com/services/T000/B000/XXXX"
+}
+
+resource "lattice_agent" "support_triage" {
+  name          = "SupportTriage"
+  model         = "openai:gpt-4o"
+  system_prompt = "Triage incoming support tickets and route them."
+  output_type   = lattice_entity.ticket_classification.name
+  tools         = [lattice_api.get_ticket.name, lattice_connector.slack_notify.name]
+}
+"""
+    spec = parse_string(src)
+    assert len(spec.agents) == 1
+    a = spec.agents[0]
+    assert a.name == "SupportTriage"
+    assert a.model == "openai:gpt-4o"
+    assert a.system_prompt == "Triage incoming support tickets and route them."
+    assert a.output_type == "TicketClassification"
+    assert a.tools == ["GetTicket", "SlackNotify"]
+
+
+def test_parse_agent_defaults():
+    src = """
+resource "lattice_agent" "support_triage" {
+  name          = "SupportTriage"
+  model         = "openai:gpt-4o"
+  system_prompt = "Triage incoming support tickets and route them."
+}
+"""
+    spec = parse_string(src)
+    a = spec.agents[0]
+    assert a.output_type is None
+    assert a.tools == []
+
+
+def test_agent_missing_name_raises():
+    src = """
+resource "lattice_agent" "bad" {
+  model         = "openai:gpt-4o"
+  system_prompt = "Triage incoming support tickets."
+}
+"""
+    with pytest.raises(ParseError) as exc:
+        parse_string(src)
+    assert "name" in str(exc.value).lower()
+
+
+def test_agent_missing_model_raises():
+    src = """
+resource "lattice_agent" "bad" {
+  name          = "Bad"
+  system_prompt = "Triage incoming support tickets."
+}
+"""
+    with pytest.raises(ParseError) as exc:
+        parse_string(src)
+    assert "model" in str(exc.value).lower()
+
+
+def test_agent_missing_system_prompt_raises():
+    src = """
+resource "lattice_agent" "bad" {
+  name  = "Bad"
+  model = "openai:gpt-4o"
+}
+"""
+    with pytest.raises(ParseError) as exc:
+        parse_string(src)
+    assert "system_prompt" in str(exc.value).lower()
+
+
+def test_agent_unknown_tool_raises():
+    src = """
+resource "lattice_api" "get_ticket" {
+  name   = "GetTicket"
+  method = "GET"
+  path   = "/tickets/{id}"
+}
+
+resource "lattice_agent" "support_triage" {
+  name          = "SupportTriage"
+  model         = "openai:gpt-4o"
+  system_prompt = "Triage incoming support tickets."
+  tools         = [lattice_api.get_ticket.name, "SomeUnknownTool"]
+}
+"""
+    with pytest.raises(ParseError) as exc:
+        parse_string(src)
+    assert "SomeUnknownTool" in str(exc.value)
+
+
+def test_agent_unknown_output_type_raises():
+    src = """
+resource "lattice_agent" "support_triage" {
+  name          = "SupportTriage"
+  model         = "openai:gpt-4o"
+  system_prompt = "Triage incoming support tickets."
+  output_type   = "SomeUnknownEntity"
+}
+"""
+    with pytest.raises(ParseError) as exc:
+        parse_string(src)
+    assert "SomeUnknownEntity" in str(exc.value)

@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from openlattice.ir import (
+    AgentDef,
     ApiDef,
     ConnectorDef,
     EntityDef,
@@ -105,6 +106,19 @@ def _connector_attrs(c: ConnectorDef) -> dict[str, Any]:
     return d
 
 
+def _agent_attrs(a: AgentDef) -> dict[str, Any]:
+    d: dict[str, Any] = {
+        "name": a.name,
+        "model": a.model,
+        "system_prompt": a.system_prompt,
+    }
+    if a.output_type:
+        d["output_type"] = a.output_type
+    if a.tools:
+        d["tools"] = a.tools
+    return d
+
+
 def spec_resources(spec: LatticeSpec) -> list[tuple[str, str, dict[str, Any]]]:
     """Return (type, label, attributes) for every resource in the spec."""
     resources: list[tuple[str, str, dict[str, Any]]] = []
@@ -120,6 +134,8 @@ def spec_resources(spec: LatticeSpec) -> list[tuple[str, str, dict[str, Any]]]:
         resources.append(("lattice_queue", _to_label(q.name), _queue_attrs(q)))
     for c in spec.connectors:
         resources.append(("lattice_connector", _to_label(c.name), _connector_attrs(c)))
+    for ag in spec.agents:
+        resources.append(("lattice_agent", _to_label(ag.name), _agent_attrs(ag)))
     return resources
 
 
