@@ -21,7 +21,7 @@ from openlattice.state import (
     spec_resources,
 )
 
-console = Console()
+console = Console(width=120)
 STATE_FILE = ".lattice-state.json"
 
 
