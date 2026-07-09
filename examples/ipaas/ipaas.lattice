@@ -1,0 +1,60 @@
+# iPaaS pipeline: webhook-in -> transform -> Slack-out
+#
+# Zapier-style shape: a third party POSTs a lead to our webhook, we validate
+# and enrich it, then notify a Slack channel via an outbound HTTP connector.
+
+resource "lattice_entity" "lead" {
+  name = "Lead"
+  fields = {
+    id     = "uuid"
+    email  = "string"
+    source = "string"
+  }
+}
+
+resource "lattice_api" "receive_lead_webhook" {
+  name      = "ReceiveLeadWebhook"
+  method    = "POST"
+  path      = "/webhooks/lead"
+  input     = lattice_entity.lead.name
+  publishes = ["LeadReceived"]
+}
+
+resource "lattice_event" "lead_received" {
+  name = "LeadReceived"
+  payload = {
+    id     = "uuid"
+    email  = "string"
+    source = "string"
+  }
+}
+
+resource "lattice_connector" "slack_notify" {
+  name   = "SlackNotify"
+  kind   = "http_webhook"
+  url    = "https://hooks.slack.com/services/PLACEHOLDER"
+  method = "POST"
+  headers = {
+    "Content-Type" = "application/json"
+  }
+  body_template = {
+    text = "New lead: {{ email }}"
+  }
+}
+
+resource "lattice_workflow" "process_lead" {
+  name    = "ProcessLead"
+  trigger = "LeadReceived"
+  steps = [
+    { name = "validate_lead" input = "Lead" output = "Lead" }
+    { name = "enrich_lead" input = "Lead" output = "Lead" }
+    { name = "slack_notify" input = "Lead" }
+  ]
+}
+
+resource "lattice_queue" "lead_processing" {
+  name         = "lead_processing"
+  message_type = "LeadReceived"
+  retries      = 5
+  dlq          = true
+}

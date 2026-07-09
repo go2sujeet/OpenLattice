@@ -1,0 +1,104 @@
+{
+  "version": "1",
+  "serial": 1,
+  "lineage": "723279a0-7423-475a-be20-68233e37018f",
+  "resources": [
+    {
+      "type": "lattice_entity",
+      "label": "lead",
+      "attributes": {
+        "name": "Lead",
+        "fields": {
+          "id": "uuid",
+          "email": "string",
+          "source": "string"
+        }
+      },
+      "spec_hash": "sha256:884e4656696441762bbd678dfa854157baf73c73d53c162dde5172b0f17f5029"
+    },
+    {
+      "type": "lattice_api",
+      "label": "receive_lead_webhook",
+      "attributes": {
+        "name": "ReceiveLeadWebhook",
+        "method": "POST",
+        "path": "/webhooks/lead",
+        "input": "Lead",
+        "publishes": [
+          "LeadReceived"
+        ]
+      },
+      "spec_hash": "sha256:1069f3b32d49b949a4328a3f5ea8621c51a820259fe471543284c78ed1f56c61"
+    },
+    {
+      "type": "lattice_event",
+      "label": "lead_received",
+      "attributes": {
+        "name": "LeadReceived",
+        "payload": {
+          "id": "uuid",
+          "email": "string",
+          "source": "string"
+        }
+      },
+      "spec_hash": "sha256:4c961d8f95737d209b35a66b82106fdf1fc4775deb0f6016d448d632676d489b"
+    },
+    {
+      "type": "lattice_workflow",
+      "label": "process_lead",
+      "attributes": {
+        "name": "ProcessLead",
+        "steps": [
+          {
+            "name": "validate_lead",
+            "input": "Lead",
+            "output": "Lead",
+            "on_error": null
+          },
+          {
+            "name": "enrich_lead",
+            "input": "Lead",
+            "output": "Lead",
+            "on_error": null
+          },
+          {
+            "name": "slack_notify",
+            "input": "Lead",
+            "output": null,
+            "on_error": null
+          }
+        ],
+        "trigger": "LeadReceived"
+      },
+      "spec_hash": "sha256:c83ffa41dde6070da2f980eecb0a5431f48850d26fb9c18f966183107ae0a1c8"
+    },
+    {
+      "type": "lattice_queue",
+      "label": "lead_processing",
+      "attributes": {
+        "name": "lead_processing",
+        "retries": 5,
+        "message_type": "LeadReceived",
+        "dlq": true
+      },
+      "spec_hash": "sha256:a3c981b0d64fe9e8a422ee9b5e843107737d485559c2da37364c5f5ce3333880"
+    },
+    {
+      "type": "lattice_connector",
+      "label": "slack_notify",
+      "attributes": {
+        "name": "SlackNotify",
+        "kind": "http_webhook",
+        "url": "https://hooks.slack.com/services/PLACEHOLDER",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body_template": {
+          "text": "New lead: {{ email }}"
+        }
+      },
+      "spec_hash": "sha256:0f2cbe0c611a7b9f7834946cb1d70b0c824f03f7cd631fdb58b03f9ebc3881ee"
+    }
+  ]
+}

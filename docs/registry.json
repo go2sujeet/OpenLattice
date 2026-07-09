@@ -40,5 +40,27 @@
       "queues"
     ],
     "description": "E-Commerce platform spec"
+  },
+  {
+    "name": "ipaas",
+    "spec_file": "examples/ipaas/ipaas.lattice",
+    "counts": {
+      "entities": 1,
+      "apis": 1,
+      "events": 1,
+      "workflows": 1,
+      "queues": 1,
+      "connectors": 1,
+      "agents": 0
+    },
+    "resource_types": [
+      "entities",
+      "apis",
+      "events",
+      "workflows",
+      "queues",
+      "connectors"
+    ],
+    "description": "iPaaS pipeline: webhook-in -> transform -> Slack-out"
   }
 ]
