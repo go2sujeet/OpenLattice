@@ -8,6 +8,7 @@ from typing import Any, cast
 
 from openlattice.ir import (
     ApiDef,
+    ConnectorDef,
     EntityDef,
     EventDef,
     FieldDef,
@@ -34,9 +35,11 @@ _VALID_RESOURCE_TYPES = {
     "lattice_event",
     "lattice_workflow",
     "lattice_queue",
+    "lattice_connector",
 }
 _VALID_FIELD_TYPES = {"uuid", "int", "float", "string", "bool", "datetime", "json"}
 _VALID_METHODS = {"GET", "POST", "PUT", "DELETE", "PATCH"}
+_VALID_CONNECTOR_KINDS = {"http_webhook"}
 
 
 def _infer_crud_operation(method: str, path: str) -> str | None:
@@ -205,9 +208,12 @@ class _Parser:
         self._consume("LBRACE")
         result: dict[str, Any] = {}
         while (tok := self._peek()) is not None and tok.kind != "RBRACE":
-            key_tok = self._consume("IDENT")
+            if tok.kind == "STRING":
+                key = self._consume_string()
+            else:
+                key = self._consume("IDENT").value
             self._consume("EQ")
-            result[key_tok.value] = self._parse_value()
+            result[key] = self._parse_value()
         self._consume("RBRACE")
         return result
 
@@ -338,6 +344,44 @@ class _Parser:
             dlq=_to_bool(attrs.get("dlq", False)),
         )
 
+    def _build_connector(self, label: str, attrs: dict[str, Any], line: int) -> ConnectorDef:
+        name = attrs.get("name")
+        if not name:
+            raise ParseError(f"lattice_connector '{label}' missing 'name'", line)
+        kind = attrs.get("kind")
+        if not kind:
+            raise ParseError(f"lattice_connector '{label}' missing 'kind'", line)
+        if kind not in _VALID_CONNECTOR_KINDS:
+            raise ParseError(
+                f"Unknown connector kind '{kind}' in connector '{name}'. "
+                f"Valid: {', '.join(sorted(_VALID_CONNECTOR_KINDS))}",
+                line,
+            )
+        url = attrs.get("url")
+        if not url:
+            raise ParseError(f"lattice_connector '{label}' missing 'url'", line)
+        method = attrs.get("method", "POST")
+        if method.upper() not in _VALID_METHODS:
+            raise ParseError(
+                f"Invalid method '{method}' in connector '{name}'. "
+                f"Valid: {', '.join(_VALID_METHODS)}",
+                line,
+            )
+        raw_headers = attrs.get("headers", {})
+        if not isinstance(raw_headers, dict):
+            raise ParseError(f"lattice_connector '{label}' headers must be a block", line)
+        raw_body_template = attrs.get("body_template", {})
+        if not isinstance(raw_body_template, dict):
+            raise ParseError(f"lattice_connector '{label}' body_template must be a block", line)
+        return ConnectorDef(
+            name=name,
+            kind=kind,
+            url=url,
+            method=method.upper(),
+            headers=cast(dict[str, str], raw_headers),
+            body_template=cast(dict[str, str], raw_body_template),
+        )
+
     def _first_pass(self):
         """Collect (type, label) -> name for reference resolution."""
         saved = self._pos
@@ -402,6 +446,8 @@ class _Parser:
                 spec.workflows.append(self._build_workflow(label, attrs, line))
             elif res_type == "lattice_queue":
                 spec.queues.append(self._build_queue(label, attrs, line))
+            elif res_type == "lattice_connector":
+                spec.connectors.append(self._build_connector(label, attrs, line))
         _link_relationships(spec)
         return spec
 
@@ -427,3 +473,4 @@ if __name__ == "__main__":
     print(f"Events:    {[e.name for e in spec.events]}")
     print(f"Workflows: {[w.name for w in spec.workflows]}")
     print(f"Queues:    {[q.name for q in spec.queues]}")
+    print(f"Connectors: {[c.name for c in spec.connectors]}")

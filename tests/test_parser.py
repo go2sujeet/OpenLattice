@@ -298,6 +298,107 @@ def test_empty_spec():
     assert spec.apis == []
 
 
+def test_parse_connector():
+    src = """
+resource "lattice_connector" "slack_notify" {
+  name    = "SlackNotify"
+  kind    = "http_webhook"
+  url     = "https://hooks.slack.com/services/T000/B000/XXXX"
+  method  = "POST"
+  headers = { "Content-Type" = "application/json" }
+  body_template = {
+    text = "{{ order_id }} shipped"
+  }
+}
+"""
+    spec = parse_string(src)
+    assert len(spec.connectors) == 1
+    c = spec.connectors[0]
+    assert c.name == "SlackNotify"
+    assert c.kind == "http_webhook"
+    assert c.url == "https://hooks.slack.com/services/T000/B000/XXXX"
+    assert c.method == "POST"
+    assert c.headers == {"Content-Type": "application/json"}
+    assert c.body_template == {"text": "{{ order_id }} shipped"}
+
+
+def test_parse_connector_defaults():
+    src = """
+resource "lattice_connector" "slack_notify" {
+  name = "SlackNotify"
+  kind = "http_webhook"
+  url  = "https://hooks.slack.com/services/T000/B000/XXXX"
+}
+"""
+    spec = parse_string(src)
+    c = spec.connectors[0]
+    assert c.method == "POST"
+    assert c.headers == {}
+    assert c.body_template == {}
+
+
+def test_connector_invalid_kind_raises():
+    src = """
+resource "lattice_connector" "bad" {
+  name = "Bad"
+  kind = "something_else"
+  url  = "https://example.com"
+}
+"""
+    with pytest.raises(ParseError) as exc:
+        parse_string(src)
+    assert "something_else" in str(exc.value)
+
+
+def test_connector_missing_name_raises():
+    src = """
+resource "lattice_connector" "bad" {
+  kind = "http_webhook"
+  url  = "https://example.com"
+}
+"""
+    with pytest.raises(ParseError) as exc:
+        parse_string(src)
+    assert "name" in str(exc.value).lower()
+
+
+def test_connector_missing_url_raises():
+    src = """
+resource "lattice_connector" "bad" {
+  name = "Bad"
+  kind = "http_webhook"
+}
+"""
+    with pytest.raises(ParseError) as exc:
+        parse_string(src)
+    assert "url" in str(exc.value).lower()
+
+
+def test_object_quoted_string_key():
+    src = """
+resource "lattice_connector" "slack_notify" {
+  name    = "SlackNotify"
+  kind    = "http_webhook"
+  url     = "https://example.com"
+  headers = { "Content-Type" = "application/json" }
+}
+"""
+    spec = parse_string(src)
+    assert spec.connectors[0].headers == {"Content-Type": "application/json"}
+
+
+def test_object_bare_ident_key_still_works():
+    src = """
+resource "lattice_entity" "order" {
+  name = "Order"
+  fields = { id = "uuid" }
+}
+"""
+    spec = parse_string(src)
+    assert spec.entities[0].fields[0].name == "id"
+    assert spec.entities[0].fields[0].type == "uuid"
+
+
 def test_unsupported_reference_attr_raises():
     src = """
 resource "lattice_entity" "order" {

@@ -1,0 +1,200 @@
+{
+  "version": "1",
+  "serial": 1,
+  "lineage": "f89da1fa-4706-4b4d-9677-80bf7fb29a2c",
+  "resources": [
+    {
+      "type": "lattice_entity",
+      "label": "user",
+      "attributes": {
+        "name": "User",
+        "fields": {
+          "id": "uuid",
+          "email": "string",
+          "name": "string"
+        }
+      },
+      "spec_hash": "sha256:f86a8a4a7acd61ffed7d6ac9450ead4d1a3a310fb8d6eb1ac44f02fd5d4cdfff"
+    },
+    {
+      "type": "lattice_entity",
+      "label": "product",
+      "attributes": {
+        "name": "Product",
+        "fields": {
+          "id": "uuid",
+          "name": "string",
+          "price": "float",
+          "stock": "int"
+        }
+      },
+      "spec_hash": "sha256:ba29bbed4ee80feed64cff391084ccd3889beea6b2c5633e4c5d854be3a16b06"
+    },
+    {
+      "type": "lattice_entity",
+      "label": "order",
+      "attributes": {
+        "name": "Order",
+        "fields": {
+          "id": "uuid",
+          "user_id": "uuid",
+          "total": "float",
+          "status": "string",
+          "created_at": "datetime"
+        }
+      },
+      "spec_hash": "sha256:bb2dbe0a7139f07113476c547060894a43a764770aa11e87dcb6ec87288189b9"
+    },
+    {
+      "type": "lattice_api",
+      "label": "create_order",
+      "attributes": {
+        "name": "CreateOrder",
+        "method": "POST",
+        "path": "/orders",
+        "input": "Order",
+        "output": "Order"
+      },
+      "spec_hash": "sha256:63fd40c7462da05b4bb5dfcd8c89110f3c9658b5a3fee9db4be29a7309f586a4"
+    },
+    {
+      "type": "lattice_api",
+      "label": "get_order",
+      "attributes": {
+        "name": "GetOrder",
+        "method": "GET",
+        "path": "/orders/{id}",
+        "output": "Order"
+      },
+      "spec_hash": "sha256:269a5988602b22c660dfff662acf826ab9ce37a9822eeea675e14219071b6270"
+    },
+    {
+      "type": "lattice_api",
+      "label": "list_orders",
+      "attributes": {
+        "name": "ListOrders",
+        "method": "GET",
+        "path": "/orders",
+        "output": "Order"
+      },
+      "spec_hash": "sha256:92077b469fb6de1e4ae75decbb3d91b92aab79cafae673fef43175103c82b995"
+    },
+    {
+      "type": "lattice_api",
+      "label": "create_product",
+      "attributes": {
+        "name": "CreateProduct",
+        "method": "POST",
+        "path": "/products",
+        "input": "Product",
+        "output": "Product"
+      },
+      "spec_hash": "sha256:b6a45c70694af23da2998cf1958bfc6b62092a7e9d3b32e19c7c67dba7afbb46"
+    },
+    {
+      "type": "lattice_api",
+      "label": "get_product",
+      "attributes": {
+        "name": "GetProduct",
+        "method": "GET",
+        "path": "/products/{id}",
+        "output": "Product"
+      },
+      "spec_hash": "sha256:495711be3fcb304dabc55df06de0759ca803bdc9fd7f236b5d6348df9a159ce3"
+    },
+    {
+      "type": "lattice_api",
+      "label": "get_user",
+      "attributes": {
+        "name": "GetUser",
+        "method": "GET",
+        "path": "/users/{id}",
+        "output": "User"
+      },
+      "spec_hash": "sha256:a5f5117ab7527424d0b2f59de7b6e13a22147ffaca2027a5e3f783ca85c203bb"
+    },
+    {
+      "type": "lattice_event",
+      "label": "order_created",
+      "attributes": {
+        "name": "OrderCreated",
+        "payload": {
+          "order_id": "uuid",
+          "user_id": "uuid",
+          "total": "float"
+        }
+      },
+      "spec_hash": "sha256:20c87279e7453ab24a321dd398788ec5e6af5aa4b970338d7a6b6c27636ed055"
+    },
+    {
+      "type": "lattice_event",
+      "label": "order_shipped",
+      "attributes": {
+        "name": "OrderShipped",
+        "payload": {
+          "order_id": "uuid",
+          "shipped_at": "datetime"
+        }
+      },
+      "spec_hash": "sha256:045d79c1ea079d14ce840a8301b237f07de67bffed2959d301f7d875bb351289"
+    },
+    {
+      "type": "lattice_workflow",
+      "label": "checkout",
+      "attributes": {
+        "name": "Checkout",
+        "steps": [
+          {
+            "name": "validate_cart",
+            "input": null,
+            "output": null,
+            "on_error": null
+          },
+          {
+            "name": "reserve_inventory",
+            "input": null,
+            "output": null,
+            "on_error": null
+          },
+          {
+            "name": "charge_payment",
+            "input": null,
+            "output": null,
+            "on_error": null
+          },
+          {
+            "name": "create_order",
+            "input": null,
+            "output": null,
+            "on_error": null
+          },
+          {
+            "name": "publish_order_created",
+            "input": null,
+            "output": null,
+            "on_error": null
+          }
+        ]
+      },
+      "spec_hash": "sha256:e1735ba57ce75d6fd7da71ecde273c88f614855c60342a1b30edf40e4998d51f"
+    },
+    {
+      "type": "lattice_queue",
+      "label": "email_notifications",
+      "attributes": {
+        "name": "email_notifications",
+        "retries": 5
+      },
+      "spec_hash": "sha256:f54e83839a21b3909b5aa8506a694d95b476f0cf13164e3eaab2400067f50bab"
+    },
+    {
+      "type": "lattice_queue",
+      "label": "inventory_updates",
+      "attributes": {
+        "name": "inventory_updates",
+        "retries": 3
+      },
+      "spec_hash": "sha256:0e3c8236ae8c8460a958bfb402d1a18e896f588900d79baa3fee74b930d1007b"
+    }
+  ]
+}
