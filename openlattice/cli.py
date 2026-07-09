@@ -7,6 +7,7 @@ from rich.panel import Panel
 from rich.text import Text
 
 from openlattice.generators.fastapi_gen import generate as gen_fastapi
+from openlattice.generators.queue_gen import generate as gen_queues
 from openlattice.generators.sqlalchemy_gen import generate as gen_sqlalchemy
 from openlattice.generators.workflow_gen import generate as gen_workflows
 from openlattice.ir import LatticeSpec
@@ -186,6 +187,8 @@ def apply(spec_file: str, output_dir: str | None, state_file: str | None):
     }
     if spec.workflows:
         files[out_dir / "workflows.py"] = gen_workflows(spec)
+    if spec.queues:
+        files[out_dir / "queues.py"] = gen_queues(spec)
     for path, content in files.items():
         path.write_text(content)
         console.print(f"  [green]✓[/green] {path}")
