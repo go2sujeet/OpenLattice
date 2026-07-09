@@ -3,22 +3,11 @@
 from typing import List
 from uuid import UUID
 
-from fastapi import APIRouter, FastAPI
-from pydantic import BaseModel
+from fastapi import APIRouter
 
-app = FastAPI(title="OpenLattice Generated App")
+from .schemas import Order
 
 router = APIRouter()
-
-class Order(BaseModel):
-    id: UUID
-    amount: int
-    status: str
-
-class Product(BaseModel):
-    id: UUID
-    name: str
-    price: float
 
 @router.post("/orders", response_model=Order)
 async def create_order(body: Order) -> Order:
@@ -31,5 +20,3 @@ async def get_order(id: UUID) -> Order:
 @router.get("/orders", response_model=List[Order])
 async def list_orders() -> List[Order]:
     raise NotImplementedError("Implement business logic here")
-
-app.include_router(router)

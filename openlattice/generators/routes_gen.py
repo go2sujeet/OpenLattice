@@ -1,25 +1,13 @@
-"""FastAPI generator for OpenLattice."""
+"""FastAPI route generator for OpenLattice.
+
+Emits an APIRouter plus one route handler per lattice_api resource in the
+spec. Handlers reference Pydantic request/response models imported from
+schemas_gen.py's output (.schemas).
+"""
 
 import re
 
 from openlattice.ir import ApiDef, EntityDef, LatticeSpec
-
-# DSL type → Python type annotation string
-_FIELD_TYPE_MAP: dict[str, str] = {
-    "uuid": "UUID",
-    "int": "int",
-    "float": "float",
-    "string": "str",
-    "bool": "bool",
-    "datetime": "datetime",
-    "json": "dict",
-}
-
-# Types that require specific imports
-_IMPORT_TRIGGERS: dict[str, str] = {
-    "UUID": "from uuid import UUID",
-    "datetime": "from datetime import datetime",
-}
 
 
 def _is_collection_endpoint(api: ApiDef) -> bool:
@@ -55,16 +43,22 @@ def _entity_has_uuid_id(entity_name: str | None, entities: list[EntityDef]) -> b
     return False
 
 
-def _generate_model(entity: EntityDef) -> list[str]:
-    lines: list[str] = []
-    lines.append(f"class {entity.name}(BaseModel):")
-    if not entity.fields:
-        lines.append("    pass")
-    else:
-        for f in entity.fields:
-            py_type = _FIELD_TYPE_MAP.get(f.type, "str")
-            lines.append(f"    {f.name}: {py_type}")
-    return lines
+def _referenced_entities(spec: LatticeSpec) -> list[str]:
+    """Entity names referenced as an API's input/output, sorted alphabetically.
+
+    Only entities actually used as a request/response type need to be
+    imported from .schemas — this mirrors the "only import what's needed"
+    pattern used for stdlib imports below. Sorted (rather than left in
+    spec.entities declaration order) to match isort/ruff's expectation that
+    names within an import statement are alphabetized.
+    """
+    referenced: set[str] = set()
+    for api in spec.apis:
+        if api.input_entity:
+            referenced.add(api.input_entity)
+        if api.output_entity:
+            referenced.add(api.output_entity)
+    return sorted(referenced)
 
 
 def _generate_route(api: ApiDef, entities: list[EntityDef]) -> list[str]:
@@ -112,23 +106,17 @@ def _generate_route(api: ApiDef, entities: list[EntityDef]) -> list[str]:
 
 
 def generate(spec: LatticeSpec) -> str:
-    """Generate a complete, runnable FastAPI Python source file from a LatticeSpec.
+    """Generate a complete FastAPI router module from a LatticeSpec.
 
     Args:
         spec: The parsed LatticeSpec IR.
 
     Returns:
-        A string containing the full Python source of the generated FastAPI application.
+        A string containing the full Python source of the generated
+        APIRouter and route handlers.
     """
     # Collect which optional import types are actually needed
     needed_types: set[str] = set()
-    for entity in spec.entities:
-        for f in entity.fields:
-            py_type = _FIELD_TYPE_MAP.get(f.type)
-            if py_type and py_type in _IMPORT_TRIGGERS:
-                needed_types.add(py_type)
-
-    # Path params typed UUID also pull in the UUID import
     for api in spec.apis:
         path_params = _extract_path_params(api.path)
         if path_params:
@@ -143,45 +131,39 @@ def generate(spec: LatticeSpec) -> str:
 
     has_collection = any(_is_collection_endpoint(api) for api in spec.apis)
 
-    # Imports — stdlib first, then third-party (PEP 8)
+    # Imports — stdlib first, then third-party, then local (PEP 8)
     import_stdlib: list[str] = []
     if "UUID" in needed_types:
         import_stdlib.append("from uuid import UUID")
-    if "datetime" in needed_types:
-        import_stdlib.append("from datetime import datetime")
     if has_collection:
         import_stdlib.append("from typing import List")
     import_stdlib.sort()
 
-    import_thirdparty: list[str] = [
-        "from fastapi import APIRouter, FastAPI",
-        "from pydantic import BaseModel",
-    ]
+    import_thirdparty: list[str] = ["from fastapi import APIRouter"]
+
+    referenced_entities = _referenced_entities(spec)
+    import_local: list[str] = []
+    if referenced_entities:
+        import_local.append(f"from .schemas import {', '.join(referenced_entities)}")
 
     import_lines: list[str] = []
     if import_stdlib:
         import_lines.extend(import_stdlib)
         import_lines.append("")
     import_lines.extend(import_thirdparty)
+    if import_local:
+        import_lines.append("")
+        import_lines.extend(import_local)
 
     sections.append("\n".join(import_lines))
 
-    # App and router
-    sections.append('app = FastAPI(title="OpenLattice Generated App")')
+    # Router
     sections.append("router = APIRouter()")
-
-    # Pydantic models
-    for entity in spec.entities:
-        model_lines = _generate_model(entity)
-        sections.append("\n".join(model_lines))
 
     # Routes
     for api in spec.apis:
         route_lines = _generate_route(api, spec.entities)
         sections.append("\n".join(route_lines))
-
-    # Mount router
-    sections.append("app.include_router(router)")
 
     # Join with double newlines between top-level blocks
     return "\n\n".join(sections) + "\n"
