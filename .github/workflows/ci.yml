@@ -31,3 +31,8 @@ jobs:
 
       - name: Run tests
         run: uv run pytest tests/ -v --tb=short
+
+      - name: Verify docs/registry.json is up to date
+        run: |
+          uv run python scripts/build_registry.py
+          git diff --exit-code docs/registry.json
