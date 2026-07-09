@@ -257,7 +257,11 @@ Full e-commerce platform: `User`, `Product`, `Order` entities; six CRUD-style AP
 
 Content platform: `Author`, `Post`, `Comment` entities; seven API endpoints including nested routes (`/posts/{id}/comments`); `PostPublished` event; `PublishPost` workflow with moderation and notification steps; subscriber notification queue.
 
-Both examples include pre-generated output in `generated/` — read the spec, compare to the output, understand the full transformation.
+### [`examples/ipaas/`](examples/ipaas/)
+
+Zapier-style integration pipeline: a `ReceiveLeadWebhook` API publishes a `LeadReceived` event, a `ProcessLead` workflow validates and enriches the lead and then calls a `SlackNotify` `lattice_connector` (real `httpx` POST to a Slack incoming-webhook URL), and a `lead_processing` queue with a dead-letter queue backs the pipeline. Demonstrates connector-wired workflow steps end to end.
+
+All three examples include pre-generated output in `generated/` — read the spec, compare to the output, understand the full transformation.
 
 ---
 
