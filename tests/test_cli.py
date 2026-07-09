@@ -55,8 +55,10 @@ def test_apply_with_output_dir_writes_files_there(runner: CliRunner, tmp_path: P
     )
 
     assert result.exit_code == 0, result.output
-    assert (out_dir / "main.py").exists()
+    assert (out_dir / "schemas.py").exists()
     assert (out_dir / "models.py").exists()
+    assert (out_dir / "routes.py").exists()
+    assert (out_dir / "app.py").exists()
     assert not (tmp_path / "generated").exists()
 
 
@@ -82,8 +84,10 @@ def test_apply_with_neither_flag_preserves_default_behavior(
     result = runner.invoke(cli, ["apply", str(spec_path)])
 
     assert result.exit_code == 0, result.output
-    assert (tmp_path / "generated" / "main.py").exists()
+    assert (tmp_path / "generated" / "schemas.py").exists()
     assert (tmp_path / "generated" / "models.py").exists()
+    assert (tmp_path / "generated" / "routes.py").exists()
+    assert (tmp_path / "generated" / "app.py").exists()
     assert (tmp_path / ".lattice-state.json").exists()
 
 
@@ -101,9 +105,9 @@ def test_apply_two_specs_two_output_dirs_no_cross_contamination(
     assert result_a.exit_code == 0, result_a.output
     assert result_b.exit_code == 0, result_b.output
 
-    main_a = (out_a / "main.py").read_text()
+    main_a = (out_a / "schemas.py").read_text()
     models_a = (out_a / "models.py").read_text()
-    main_b = (out_b / "main.py").read_text()
+    main_b = (out_b / "schemas.py").read_text()
     models_b = (out_b / "models.py").read_text()
 
     assert "Author" in main_a or "Author" in models_a
@@ -126,5 +130,7 @@ def test_plan_accepts_output_dir_flag(runner: CliRunner, tmp_path: Path) -> None
     # rather than the exact joined path string.
     output_no_newlines = result.output.replace("\n", "")
     assert "out_a" in output_no_newlines
-    assert "main.py" in output_no_newlines
+    assert "schemas.py" in output_no_newlines
     assert "models.py" in output_no_newlines
+    assert "routes.py" in output_no_newlines
+    assert "app.py" in output_no_newlines

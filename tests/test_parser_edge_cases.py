@@ -6,11 +6,14 @@ import traceback
 
 sys.path.insert(0, ".")
 
-from openlattice.generators.fastapi_gen import generate as fastapi_generate
+from openlattice.generators.app_gen import generate as app_generate
+from openlattice.generators.routes_gen import generate as routes_generate
+from openlattice.generators.schemas_gen import generate as schemas_generate
 from openlattice.generators.sqlalchemy_gen import generate as sqlalchemy_generate
 from openlattice.parser import parse_string
 
 results = []
+
 
 def run_test(number, name, fn):
     print(f"\n--- Test {number}: {name} ---")
@@ -29,7 +32,7 @@ def run_test(number, name, fn):
 # Test 1: All 5 resource types
 # ---------------------------------------------------------------------------
 def test_1():
-    src = '''
+    src = """
 resource "lattice_entity" "user" {
   name = "User"
   fields = {
@@ -59,7 +62,7 @@ resource "lattice_queue" "welcome_email" {
   name    = "welcome_email"
   retries = 3
 }
-'''
+"""
     spec = parse_string(src)
     assert len(spec.entities) == 1, f"Expected 1 entity, got {len(spec.entities)}"
     assert len(spec.apis) == 1, f"Expected 1 api, got {len(spec.apis)}"
@@ -88,7 +91,7 @@ resource "lattice_queue" "welcome_email" {
 # Test 2: Comments, blank lines, and indentation
 # ---------------------------------------------------------------------------
 def test_2():
-    src = '''
+    src = """
 
 # Leading comment
 # Multi-line
@@ -114,7 +117,7 @@ def test_2():
 
 # Trailing comment
 
-'''
+"""
     spec = parse_string(src)
     assert len(spec.entities) == 1
     assert len(spec.apis) == 1
@@ -130,14 +133,14 @@ def test_3():
     """Mixed-type array parsing, exercised via lattice_api.publishes (a loosely-typed
     list attribute) — workflow.steps is now structurally validated (see IR enrichment,
     issue #8), so it's no longer the right vehicle for testing raw array/value parsing."""
-    src = '''
+    src = """
 resource "lattice_api" "mixed" {
   name      = "Mixed"
   method    = "POST"
   path      = "/mixed"
   publishes = ["alpha", 42, "beta", 3.14, "gamma", 0]
 }
-'''
+"""
     spec = parse_string(src)
     steps = spec.apis[0].publishes
     assert len(steps) == 6, f"Expected 6 items, got {len(steps)}"
@@ -160,7 +163,7 @@ def test_4():
     """Nested objects inside attribute values. The queue resource handles
     arbitrary extra attributes through parse_attrs -> _parse_value -> _parse_object.
     QueueDef only exposes name/retries but the parser itself must handle nesting."""
-    src = '''
+    src = """
 resource "lattice_queue" "nested_test" {
   name    = "nested_test"
   retries = 3
@@ -172,7 +175,7 @@ resource "lattice_queue" "nested_test" {
     }
   }
 }
-'''
+"""
     spec = parse_string(src)
     assert spec.queues[0].name == "nested_test"
     assert spec.queues[0].retries == 3
@@ -183,7 +186,7 @@ resource "lattice_queue" "nested_test" {
 # Test 5: Forward references
 # ---------------------------------------------------------------------------
 def test_5():
-    src = '''
+    src = """
 resource "lattice_api" "get_profile" {
   name   = "GetProfile"
   method = "GET"
@@ -198,7 +201,7 @@ resource "lattice_entity" "profile" {
     bio    = "string"
   }
 }
-'''
+"""
     spec = parse_string(src)
     assert len(spec.entities) == 1
     assert len(spec.apis) == 1
@@ -211,7 +214,7 @@ resource "lattice_entity" "profile" {
 # Test 6: Empty arrays and empty objects
 # ---------------------------------------------------------------------------
 def test_6():
-    src = '''
+    src = """
 resource "lattice_workflow" "no_steps" {
   name  = "NoSteps"
   steps = []
@@ -220,7 +223,7 @@ resource "lattice_entity" "bare" {
   name   = "Bare"
   fields = {}
 }
-'''
+"""
     spec = parse_string(src)
     assert len(spec.workflows) == 1
     assert spec.workflows[0].name == "NoSteps"
@@ -235,14 +238,14 @@ resource "lattice_entity" "bare" {
 # ---------------------------------------------------------------------------
 def test_7():
     """See test_3 docstring: numeric array values exercised via publishes, not steps."""
-    src = '''
+    src = """
 resource "lattice_api" "num_test" {
   name      = "NumTest"
   method    = "POST"
   path      = "/num-test"
   publishes = [3.14, 2.718, 1.0, 100, 0, 999999]
 }
-'''
+"""
     spec = parse_string(src)
     steps = spec.apis[0].publishes
     assert steps[0] == 3.14
@@ -261,7 +264,7 @@ resource "lattice_api" "num_test" {
 
 
 # ---------------------------------------------------------------------------
-# Test 8: FastAPI output compiles
+# Test 8: FastAPI output (schemas + routes + app) compiles
 # ---------------------------------------------------------------------------
 def test_8():
     src = """
@@ -306,14 +309,19 @@ resource "lattice_api" "list_posts" {
 }
 """
     spec = parse_string(src)
-    code = fastapi_generate(spec)
-    try:
-        ast.parse(code)
-        print(f"        FastAPI generated {len(code)} bytes, AST is valid")
-    except SyntaxError:
-        print("        SyntaxError in generated code (first 500 chars):")
-        print(f"        {code[:500]}")
-        raise
+    for label, gen_fn in (
+        ("schemas", schemas_generate),
+        ("routes", routes_generate),
+        ("app", app_generate),
+    ):
+        code = gen_fn(spec)
+        try:
+            ast.parse(code)
+            print(f"        FastAPI {label} generated {len(code)} bytes, AST is valid")
+        except SyntaxError:
+            print(f"        SyntaxError in generated {label} code (first 500 chars):")
+            print(f"        {code[:500]}")
+            raise
 
 
 # ---------------------------------------------------------------------------
@@ -375,7 +383,7 @@ if __name__ == "__main__":
         (5, "Forward references (entity after API)", test_5),
         (6, "Empty arrays and empty objects", test_6),
         (7, "Int and float number parsing", test_7),
-        (8, "FastAPI generated code is compilable (ast.parse)", test_8),
+        (8, "FastAPI generated code (schemas/routes/app) is compilable (ast.parse)", test_8),
         (9, "SQLAlchemy generated code is compilable (ast.parse)", test_9),
     ]
 

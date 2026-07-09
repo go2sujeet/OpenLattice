@@ -6,9 +6,11 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
 
+from openlattice.generators.app_gen import generate as gen_app
 from openlattice.generators.events_gen import generate as gen_events
-from openlattice.generators.fastapi_gen import generate as gen_fastapi
 from openlattice.generators.queue_gen import generate as gen_queues
+from openlattice.generators.routes_gen import generate as gen_routes
+from openlattice.generators.schemas_gen import generate as gen_schemas
 from openlattice.generators.sqlalchemy_gen import generate as gen_sqlalchemy
 from openlattice.generators.workflow_gen import generate as gen_workflows
 from openlattice.ir import LatticeSpec
@@ -132,10 +134,12 @@ def plan(spec_file: str, output_dir: str | None, state_file: str | None):
     content.append(f"Spec: {spec_file}\n\n", style="dim")
     content.append(_render_plan(diff, spec, state))
     content.append("\n  Will generate:\n", style="dim")
-    content.append(
-        f"    → {resolved_out_dir / 'main.py'}        FastAPI app + routes\n", style="cyan"
-    )
+    content.append(f"    → {resolved_out_dir / 'schemas.py'}     Pydantic schemas\n", style="cyan")
     content.append(f"    → {resolved_out_dir / 'models.py'}      SQLAlchemy models\n", style="cyan")
+    content.append(f"    → {resolved_out_dir / 'routes.py'}      FastAPI routes\n", style="cyan")
+    content.append(
+        f"    → {resolved_out_dir / 'app.py'}         FastAPI app entrypoint\n", style="cyan"
+    )
     if diff.to_add or diff.to_change or diff.to_destroy:
         content.append(
             f"\n  Run `openlattice apply {spec_file}` to perform these actions.", style="dim"
@@ -183,8 +187,10 @@ def apply(spec_file: str, output_dir: str | None, state_file: str | None):
     out_dir.mkdir(exist_ok=True, parents=True)
 
     files = {
-        out_dir / "main.py": gen_fastapi(spec),
+        out_dir / "schemas.py": gen_schemas(spec),
         out_dir / "models.py": gen_sqlalchemy(spec),
+        out_dir / "routes.py": gen_routes(spec),
+        out_dir / "app.py": gen_app(spec),
     }
     if spec.events:
         files[out_dir / "events.py"] = gen_events(spec)
