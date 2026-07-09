@@ -22,6 +22,7 @@ import pytest
 
 from openlattice.generators.fastapi_gen import generate as gen_fastapi
 from openlattice.generators.sqlalchemy_gen import generate as gen_sqlalchemy
+from openlattice.generators.workflow_gen import generate as gen_workflows
 from openlattice.parser import parse_file
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -51,8 +52,7 @@ def _snapshot(spec_file: Path, gen_fn, golden_file: Path) -> None:
         "If this change is intentional, update the golden:\n"
         f"    UPDATE_GOLDEN=1 uv run pytest {Path(__file__).name}\n"
         "Then review and commit the golden diff.\n\n"
-        "Falling back to a textual diff for visibility:\n"
-        + _diff(expected, actual)
+        "Falling back to a textual diff for visibility:\n" + _diff(expected, actual)
     )
 
 
@@ -100,3 +100,19 @@ def test_sqlalchemy_golden_deterministic() -> None:
     first = gen_sqlalchemy(spec)
     second = gen_sqlalchemy(spec)
     assert first == second, "SQLAlchemy generator is non-deterministic"
+
+
+def test_workflow_golden_ecommerce() -> None:
+    _snapshot(
+        REPO_ROOT / "examples" / "ecommerce" / "ecommerce.lattice",
+        gen_workflows,
+        Path("ecommerce_workflows.py"),
+    )
+
+
+def test_workflow_golden_deterministic() -> None:
+    """Generator must be pure: same spec in -> same bytes out, twice."""
+    spec = parse_file(str(REPO_ROOT / "examples" / "ecommerce" / "ecommerce.lattice"))
+    first = gen_workflows(spec)
+    second = gen_workflows(spec)
+    assert first == second, "Workflow generator is non-deterministic"

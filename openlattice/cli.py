@@ -8,6 +8,7 @@ from rich.text import Text
 
 from openlattice.generators.fastapi_gen import generate as gen_fastapi
 from openlattice.generators.sqlalchemy_gen import generate as gen_sqlalchemy
+from openlattice.generators.workflow_gen import generate as gen_workflows
 from openlattice.ir import LatticeSpec
 from openlattice.parser import ParseError, parse_file
 from openlattice.state import (
@@ -183,6 +184,8 @@ def apply(spec_file: str, output_dir: str | None, state_file: str | None):
         out_dir / "main.py": gen_fastapi(spec),
         out_dir / "models.py": gen_sqlalchemy(spec),
     }
+    if spec.workflows:
+        files[out_dir / "workflows.py"] = gen_workflows(spec)
     for path, content in files.items():
         path.write_text(content)
         console.print(f"  [green]✓[/green] {path}")
