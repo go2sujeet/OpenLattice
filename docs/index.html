@@ -563,58 +563,66 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 const PRESETS = {
-  ecommerce: `entity "Order" {
+  ecommerce: `resource "lattice_entity" "order" {
+  name = "Order"
   fields = {
-    id         = uuid
-    user_id    = uuid
-    total      = float
-    status     = string
-    created_at = datetime
+    id         = "uuid"
+    user_id    = "uuid"
+    total      = "float"
+    status     = "string"
+    created_at = "datetime"
   }
 }
 
-entity "Product" {
+resource "lattice_entity" "product" {
+  name = "Product"
   fields = {
-    id    = uuid
-    name  = string
-    price = float
-    stock = int
+    id    = "uuid"
+    name  = "string"
+    price = "float"
+    stock = "int"
   }
 }
 
-api "CreateOrder" {
-  method = POST
+resource "lattice_api" "create_order" {
+  name   = "CreateOrder"
+  method = "POST"
   path   = "/orders"
-  input  = Order
-  output = Order
+  input  = "Order"
+  output = "Order"
 }
 
-api "GetOrder" {
-  method = GET
+resource "lattice_api" "get_order" {
+  name   = "GetOrder"
+  method = "GET"
   path   = "/orders/{id}"
-  output = Order
+  output = "Order"
 }
 
-api "ListOrders" {
-  method = GET
+resource "lattice_api" "list_orders" {
+  name   = "ListOrders"
+  method = "GET"
   path   = "/orders"
-  output = Order
+  output = "Order"
 }
 
-api "GetProduct" {
-  method = GET
+resource "lattice_api" "get_product" {
+  name   = "GetProduct"
+  method = "GET"
   path   = "/products/{id}"
-  output = Product
+  output = "Product"
 }
 
-event "OrderCreated" {
+resource "lattice_event" "order_created" {
+  name = "OrderCreated"
   payload = {
-    order_id = uuid
-    total    = float
+    order_id = "uuid"
+    total    = "float"
   }
 }
 
-workflow "Checkout" {
+resource "lattice_workflow" "checkout" {
+  name  = "Checkout"
   steps = [
     "validate_cart",
     "charge_payment",
@@ -623,64 +631,73 @@ workflow "Checkout" {
   ]
 }
 
-queue "notifications" {
+resource "lattice_queue" "notifications" {
+  name    = "notifications"
   retries = 5
 }`,
 
-  blog: `entity "Post" {
+  blog: `resource "lattice_entity" "post" {
+  name = "Post"
   fields = {
-    id           = uuid
-    author_id    = uuid
-    title        = string
-    content      = string
-    published_at = datetime
+    id           = "uuid"
+    author_id    = "uuid"
+    title        = "string"
+    content      = "string"
+    published_at = "datetime"
   }
 }
 
-entity "Comment" {
+resource "lattice_entity" "comment" {
+  name = "Comment"
   fields = {
-    id        = uuid
-    post_id   = uuid
-    author_id = uuid
-    body      = string
+    id        = "uuid"
+    post_id   = "uuid"
+    author_id = "uuid"
+    body      = "string"
   }
 }
 
-api "CreatePost" {
-  method = POST
+resource "lattice_api" "create_post" {
+  name   = "CreatePost"
+  method = "POST"
   path   = "/posts"
-  input  = Post
-  output = Post
+  input  = "Post"
+  output = "Post"
 }
 
-api "GetPost" {
-  method = GET
+resource "lattice_api" "get_post" {
+  name   = "GetPost"
+  method = "GET"
   path   = "/posts/{id}"
-  output = Post
+  output = "Post"
 }
 
-api "ListPosts" {
-  method = GET
+resource "lattice_api" "list_posts" {
+  name   = "ListPosts"
+  method = "GET"
   path   = "/posts"
-  output = Post
+  output = "Post"
 }
 
-api "CreateComment" {
-  method = POST
+resource "lattice_api" "create_comment" {
+  name   = "CreateComment"
+  method = "POST"
   path   = "/posts/{id}/comments"
-  input  = Comment
-  output = Comment
+  input  = "Comment"
+  output = "Comment"
 }
 
-event "PostPublished" {
+resource "lattice_event" "post_published" {
+  name = "PostPublished"
   payload = {
-    post_id   = uuid
-    author_id = uuid
-    title     = string
+    post_id   = "uuid"
+    author_id = "uuid"
+    title     = "string"
   }
 }
 
-workflow "PublishPost" {
+resource "lattice_workflow" "publish_post" {
+  name  = "PublishPost"
   steps = [
     "validate_content",
     "run_moderation",
@@ -689,50 +706,57 @@ workflow "PublishPost" {
   ]
 }`,
 
-  tasks: `entity "Task" {
+  tasks: `resource "lattice_entity" "task" {
+  name = "Task"
   fields = {
-    id         = uuid
-    title      = string
-    done       = bool
-    created_at = datetime
+    id         = "uuid"
+    title      = "string"
+    done       = "bool"
+    created_at = "datetime"
   }
 }
 
-api "CreateTask" {
-  method = POST
+resource "lattice_api" "create_task" {
+  name   = "CreateTask"
+  method = "POST"
   path   = "/tasks"
-  input  = Task
-  output = Task
+  input  = "Task"
+  output = "Task"
 }
 
-api "GetTask" {
-  method = GET
+resource "lattice_api" "get_task" {
+  name   = "GetTask"
+  method = "GET"
   path   = "/tasks/{id}"
-  output = Task
+  output = "Task"
 }
 
-api "ListTasks" {
-  method = GET
+resource "lattice_api" "list_tasks" {
+  name   = "ListTasks"
+  method = "GET"
   path   = "/tasks"
-  output = Task
+  output = "Task"
 }
 
-api "UpdateTask" {
-  method = PUT
+resource "lattice_api" "update_task" {
+  name   = "UpdateTask"
+  method = "PUT"
   path   = "/tasks/{id}"
-  input  = Task
-  output = Task
+  input  = "Task"
+  output = "Task"
 }
 
-event "TaskCompleted" {
+resource "lattice_event" "task_completed" {
+  name = "TaskCompleted"
   payload = {
-    task_id    = uuid
-    title      = string
-    completed_at = datetime
+    task_id      = "uuid"
+    title        = "string"
+    completed_at = "datetime"
   }
 }
 
-workflow "CompleteTask" {
+resource "lattice_workflow" "complete_task" {
+  name  = "CompleteTask"
   steps = [
     "mark_done",
     "emit_task_completed",
@@ -745,9 +769,24 @@ workflow "CompleteTask" {
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  PARSER
+//
+//  Mirrors openlattice/parser.py's grammar: every top-level block is
+//  `resource "lattice_type" "label" { name = "..." ... }` (TF-style), field
+//  values may be quoted or bare (the real parser accepts both — quoting is
+//  just the documented convention), and a `name` attribute is required in
+//  every block. Only lattice_entity / lattice_api / lattice_event /
+//  lattice_workflow / lattice_queue are rendered into generated code here —
+//  lattice_connector / lattice_agent are accepted (so pasting valid DSL
+//  never errors) but produce no output, matching the real Python generator
+//  which doesn't emit connectors.py / agents.py yet either.
 // ═══════════════════════════════════════════════════════════════════════════
 
-const VALID_TYPES = new Set(['uuid','int','float','string','bool','datetime','json']);
+const VALID_RESOURCE_TYPES = new Set([
+  'lattice_entity', 'lattice_api', 'lattice_event',
+  'lattice_workflow', 'lattice_queue', 'lattice_connector', 'lattice_agent'
+]);
+const VALID_FIELD_TYPES = new Set(['uuid','int','float','string','bool','datetime','json']);
+const VALID_METHODS = new Set(['GET','POST','PUT','DELETE','PATCH']);
 
 function parseLattice(src) {
   // Strip comments, track original line numbers via a line array
@@ -857,60 +896,92 @@ function parseLattice(src) {
     queues: []
   };
 
+  // Tracks (resType, label) pairs already seen, so duplicate resource
+  // definitions error out the same way the real parser's first pass does.
+  const seenResources = new Set();
+
   try {
     while (pos < tokens.length) {
       const keyword = next();
-      const name = readName();
+      if (keyword !== 'resource') {
+        const ln = lineMap[pos - 1] || '?';
+        throw new Error(`Expected "resource" block, got "${keyword}" at line ${ln} — TF-style syntax requires resource "lattice_type" "label" { ... }`);
+      }
 
-      if (keyword === 'entity') {
-        const props = parseBlock();
+      const blockStartLine = currentLine();
+      const resType = readName();
+      const label = readName();
+
+      if (!VALID_RESOURCE_TYPES.has(resType)) {
+        throw new Error(`Unknown resource type "${resType}" at line ${blockStartLine}. Valid: ${[...VALID_RESOURCE_TYPES].sort().join(', ')}`);
+      }
+
+      const dupKey = `${resType}::${label}`;
+      if (seenResources.has(dupKey)) {
+        throw new Error(`Duplicate resource: ${resType} "${label}" is defined more than once`);
+      }
+      seenResources.add(dupKey);
+
+      const props = parseBlock();
+      const name = props.name;
+      if (!name) {
+        throw new Error(`${resType} "${label}" missing 'name' attribute (required)`);
+      }
+
+      if (resType === 'lattice_entity') {
         if (!props.fields || typeof props.fields !== 'object' || Array.isArray(props.fields)) {
-          throw new Error(`entity "${name}" is missing a fields = { ... } block`);
+          throw new Error(`lattice_entity "${label}" (name="${name}") is missing a fields = { ... } block`);
         }
         const fields = Object.entries(props.fields).map(([fname, ftype]) => {
-          if (!VALID_TYPES.has(ftype)) {
-            throw new Error(`Unknown type "${ftype}" for field "${fname}" in entity "${name}"`);
+          if (!VALID_FIELD_TYPES.has(ftype)) {
+            throw new Error(`Unknown field type "${ftype}" for field "${fname}" in lattice_entity "${label}" (name="${name}"). Valid: ${[...VALID_FIELD_TYPES].sort().join(', ')}`);
           }
           return { name: fname, type: ftype };
         });
         result.entities.push({ name, fields });
 
-      } else if (keyword === 'api') {
-        const props = parseBlock();
-        if (!props.method) throw new Error(`api "${name}" missing method`);
-        if (!props.path)   throw new Error(`api "${name}" missing path`);
-        if (!props.output) throw new Error(`api "${name}" missing output`);
+      } else if (resType === 'lattice_api') {
+        if (!props.method) throw new Error(`lattice_api "${label}" (name="${name}") missing 'method'`);
+        if (!props.path)   throw new Error(`lattice_api "${label}" (name="${name}") missing 'path'`);
+        const method = String(props.method).toUpperCase();
+        if (!VALID_METHODS.has(method)) {
+          throw new Error(`Invalid method "${props.method}" in lattice_api "${label}" (name="${name}"). Valid: ${[...VALID_METHODS].join(', ')}`);
+        }
         result.apis.push({
           name,
-          method: props.method.toUpperCase(),
+          method,
           path: props.path,
           input: props.input || null,
-          output: props.output
+          output: props.output || null
         });
 
-      } else if (keyword === 'event') {
-        const props = parseBlock();
+      } else if (resType === 'lattice_event') {
         let payload = [];
         if (props.payload && typeof props.payload === 'object' && !Array.isArray(props.payload)) {
-          payload = Object.entries(props.payload).map(([pname, ptype]) => ({ name: pname, type: ptype }));
+          payload = Object.entries(props.payload).map(([pname, ptype]) => {
+            if (!VALID_FIELD_TYPES.has(ptype)) {
+              throw new Error(`Unknown field type "${ptype}" for field "${pname}" in lattice_event "${label}" (name="${name}"). Valid: ${[...VALID_FIELD_TYPES].sort().join(', ')}`);
+            }
+            return { name: pname, type: ptype };
+          });
         }
         result.events.push({ name, payload });
 
-      } else if (keyword === 'workflow') {
-        const props = parseBlock();
+      } else if (resType === 'lattice_workflow') {
         const steps = Array.isArray(props.steps) ? props.steps : [];
         result.workflows.push({ name, steps });
 
-      } else if (keyword === 'queue') {
-        const props = parseBlock();
+      } else if (resType === 'lattice_queue') {
         result.queues.push({
           name,
-          retries: props.retries !== undefined ? parseInt(props.retries, 10) : 0
+          retries: props.retries !== undefined ? parseInt(props.retries, 10) : 3
         });
 
       } else {
-        const ln = lineMap[pos - 1] || '?';
-        throw new Error(`Unknown keyword "${keyword}" at line ${ln}`);
+        // lattice_connector / lattice_agent — valid TF-style DSL, but the
+        // playground (like the real Python generator today) doesn't emit
+        // code for these yet. Accept and ignore rather than error, so
+        // pasting genuinely valid .lattice source never breaks the editor.
       }
     }
   } catch (e) {
@@ -1035,11 +1106,14 @@ function generateFastAPI(spec) {
       }
 
       // Build decorator
-      // For list endpoints (no path params, GET), use response_model=List[X]
-      const isList = method === 'get' && pathParams.length === 0 && !input;
+      // For list endpoints (no path params, GET), use response_model=List[X].
+      // `output` is optional (e.g. a DELETE endpoint may not return a body),
+      // so only emit response_model when one was declared.
+      const isList = method === 'get' && pathParams.length === 0 && !input && !!output;
       const responseModel = isList ? `List[${output}]` : output;
+      const responseModelPart = responseModel ? `, response_model=${responseModel}` : '';
 
-      lines.push(`@router.${method}("${path}", response_model=${responseModel})`);
+      lines.push(`@router.${method}("${path}"${responseModelPart})`);
 
       // Build function signature
       const args = [];
@@ -1048,7 +1122,7 @@ function generateFastAPI(spec) {
       }
       if (input) args.push(`body: ${input}`);
 
-      const returnType = isList ? `List[${output}]` : output;
+      const returnType = isList ? `List[${output}]` : (output || 'None');
       const fnName = toSnakeCase(api.name);
       lines.push(`async def ${fnName}(${args.join(', ')}) -> ${returnType}:`);
       lines.push(`    raise NotImplementedError("Implement business logic here")`);
