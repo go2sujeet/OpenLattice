@@ -27,9 +27,17 @@ jobs:
           name: dist
           path: dist/
 
+  # Requires a PyPI trusted publisher registered for this repo/workflow at
+  # https://pypi.org/manage/project/openlattice/settings/publishing/ (one-time,
+  # manual, done on pypi.org — not something this workflow can configure).
+  # Until that's set up, this step fails; continue-on-error keeps that from
+  # failing the whole run, since `create-release` (the GitHub release with
+  # downloadable wheel/sdist, usable locally via `pip install`) doesn't
+  # depend on this job succeeding.
   publish-pypi:
     needs: build
     runs-on: ubuntu-latest
+    continue-on-error: true
     environment:
       name: pypi
       url: https://pypi.org/p/openlattice
