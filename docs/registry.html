@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpenLattice Registry — Example Pipeline Index</title>
+  <meta name="description" content="Browse OpenLattice example .lattice specs — searchable and filterable by resource type." />
+  <meta property="og:title" content="OpenLattice Registry — Example Pipeline Index" />
+  <meta property="og:description" content="Browse OpenLattice example .lattice specs — searchable and filterable by resource type." />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-0:       #0d1117;
+      --bg-1:       #161b22;
+      --bg-2:       #1c2128;
+      --bg-3:       #21262d;
+      --border:     #30363d;
+      --border-2:   #21262d;
+      --text-0:     #e6edf3;
+      --text-1:     #8b949e;
+      --text-2:     #6e7681;
+      --accent:     #58a6ff;
+      --accent-dim: #1f3156;
+      --green:      #3fb950;
+      --red:        #f85149;
+      --red-dim:    #3d1c1c;
+      --orange:     #d29922;
+      --purple:     #bc8cff;
+      --radius:     8px;
+      --header-h:   56px;
+      --mono:       'JetBrains Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+      --sans:       'Inter', system-ui, -apple-system, sans-serif;
+    }
+
+    html, body {
+      min-height: 100%;
+      background: var(--bg-0);
+      color: var(--text-0);
+      font-family: var(--sans);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* ── HEADER ─────────────────────────────────────────────────────── */
+    header {
+      height: var(--header-h);
+      background: var(--bg-1);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #58a6ff 0%, #bc8cff 100%);
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .logo-text {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-0);
+    }
+
+    .logo-tagline {
+      font-size: 12px;
+      color: var(--text-1);
+      font-weight: 400;
+    }
+
+    header .spacer { flex: 1; }
+
+    .header-links {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-link {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      transition: background 0.15s, color 0.15s;
+      border: 1px solid var(--border);
+      color: var(--text-0);
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .btn-link:hover {
+      background: var(--bg-3);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .btn-link.accent {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .btn-link.accent:hover {
+      background: #253d6a;
+    }
+
+    /* ── MAIN ───────────────────────────────────────────────────────── */
+    main {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 32px 20px 64px;
+    }
+
+    .page-title {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .page-subtitle {
+      font-size: 14px;
+      color: var(--text-1);
+      margin-bottom: 24px;
+    }
+
+    /* ── CONTROLS ───────────────────────────────────────────────────── */
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+      align-items: center;
+    }
+
+    #searchInput {
+      flex: 1;
+      min-width: 200px;
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 9px 12px;
+      color: var(--text-0);
+      font-family: var(--sans);
+      font-size: 13.5px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    #searchInput:focus { border-color: var(--accent); }
+    #searchInput::placeholder { color: var(--text-2); }
+
+    .filter-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .filter-chip {
+      padding: 6px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--bg-2);
+      color: var(--text-1);
+      font-size: 12.5px;
+      font-family: var(--sans);
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    .filter-chip:hover {
+      border-color: var(--accent);
+      color: var(--text-0);
+      background: var(--bg-3);
+    }
+
+    .filter-chip.active {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* ── RESULTS META ───────────────────────────────────────────────── */
+    .results-meta {
+      font-size: 12.5px;
+      color: var(--text-2);
+      margin-bottom: 14px;
+    }
+
+    /* ── CARDS ──────────────────────────────────────────────────────── */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      background: var(--bg-1);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: border-color 0.15s;
+    }
+
+    .card:hover { border-color: var(--accent); }
+
+    .card-name {
+      font-family: var(--mono);
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-0);
+    }
+
+    .card-desc {
+      font-size: 13px;
+      color: var(--text-1);
+      flex: 1;
+    }
+
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 9px;
+      border-radius: 20px;
+      background: var(--bg-3);
+      border: 1px solid var(--border-2);
+      font-size: 11.5px;
+      font-family: var(--mono);
+      color: var(--text-1);
+    }
+
+    .badge .count { color: var(--accent); font-weight: 600; }
+
+    .card-links {
+      display: flex;
+      gap: 10px;
+      margin-top: 2px;
+    }
+
+    .card-links a {
+      font-size: 12.5px;
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .card-links a:hover { text-decoration: underline; }
+
+    /* ── EMPTY STATE ────────────────────────────────────────────────── */
+    .empty-state {
+      text-align: center;
+      color: var(--text-2);
+      padding: 48px 0;
+      font-size: 13.5px;
+      grid-column: 1 / -1;
+    }
+
+    /* ── SCROLLBARS ─────────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-2); }
+
+    @media (max-width: 640px) {
+      .logo-tagline { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── HEADER ──────────────────────────────────────────────────────────── -->
+<header>
+  <a class="logo" href="https://github.com/go2sujeet/OpenLattice" target="_blank" rel="noopener">
+    <div class="logo-icon">🔷</div>
+    <div>
+      <div class="logo-text">OpenLattice <span style="color:var(--text-2);font-weight:400;font-size:13px">Registry</span></div>
+      <div class="logo-tagline">Searchable index of example .lattice pipelines</div>
+    </div>
+  </a>
+  <div class="spacer"></div>
+  <div class="header-links">
+    <a class="btn-link" href="index.html">Playground</a>
+    <a class="btn-link" href="https://github.com/go2sujeet/OpenLattice" target="_blank" rel="noopener">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+      GitHub
+    </a>
+  </div>
+</header>
+
+<!-- ── MAIN ────────────────────────────────────────────────────────────── -->
+<main>
+  <div class="page-title">Pipeline Registry</div>
+  <div class="page-subtitle">Browse example <code style="font-family:var(--mono)">.lattice</code> specs — generated from the real OpenLattice parser, always in sync with <code style="font-family:var(--mono)">examples/</code>.</div>
+
+  <div class="controls">
+    <input id="searchInput" type="text" placeholder="Search by name or description…" autocomplete="off" />
+  </div>
+  <div class="controls">
+    <div class="filter-chips" id="filterChips"><!-- filled by JS --></div>
+  </div>
+
+  <div class="results-meta" id="resultsMeta"></div>
+
+  <div class="card-grid" id="cardGrid"><!-- filled by JS --></div>
+</main>
+
+<!-- ── SCRIPTS ───────────────────────────────────────────────────────────── -->
+<script>
+'use strict';
+
+const REPO_BLOB_BASE = 'https://github.com/go2sujeet/OpenLattice/blob/main/';
+
+// Order + display labels for resource-type filter chips / badges.
+const RESOURCE_TYPES = [
+  { key: 'entities',   label: 'entities' },
+  { key: 'apis',       label: 'apis' },
+  { key: 'events',     label: 'events' },
+  { key: 'workflows',  label: 'workflows' },
+  { key: 'queues',     label: 'queues' },
+  { key: 'connectors', label: 'connectors' },
+  { key: 'agents',     label: 'agents' },
+];
+
+let registry = [];
+let activeFilters = new Set(); // resource-type keys currently required
+
+const elSearch = document.getElementById('searchInput');
+const elChips = document.getElementById('filterChips');
+const elGrid = document.getElementById('cardGrid');
+const elMeta = document.getElementById('resultsMeta');
+
+function singularize(label, n) {
+  if (n === 1 && label.endsWith('s')) return label.slice(0, -1);
+  return label;
+}
+
+function renderChips() {
+  elChips.innerHTML = RESOURCE_TYPES.map(rt => `
+    <button class="filter-chip${activeFilters.has(rt.key) ? ' active' : ''}" data-key="${rt.key}">
+      ${rt.label}
+    </button>
+  `).join('');
+
+  elChips.querySelectorAll('.filter-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const key = chip.dataset.key;
+      if (activeFilters.has(key)) {
+        activeFilters.delete(key);
+      } else {
+        activeFilters.add(key);
+      }
+      renderChips();
+      renderCards();
+    });
+  });
+}
+
+function matchesFilters(entry) {
+  const query = elSearch.value.trim().toLowerCase();
+  if (query) {
+    const haystack = `${entry.name} ${entry.description || ''}`.toLowerCase();
+    if (!haystack.includes(query)) return false;
+  }
+  for (const key of activeFilters) {
+    if (!(entry.counts && entry.counts[key] > 0)) return false;
+  }
+  return true;
+}
+
+function renderCards() {
+  const visible = registry.filter(matchesFilters);
+
+  elMeta.textContent = registry.length === 0
+    ? ''
+    : `Showing ${visible.length} of ${registry.length} example${registry.length === 1 ? '' : 's'}`;
+
+  if (visible.length === 0) {
+    elGrid.innerHTML = `<div class="empty-state">No examples match your search/filters.</div>`;
+    return;
+  }
+
+  elGrid.innerHTML = visible.map(entry => {
+    const badges = RESOURCE_TYPES
+      .filter(rt => entry.counts && entry.counts[rt.key] > 0)
+      .map(rt => {
+        const n = entry.counts[rt.key];
+        return `<span class="badge"><span class="count">${n}</span> ${singularize(rt.label, n)}</span>`;
+      })
+      .join('');
+
+    const blobUrl = REPO_BLOB_BASE + entry.spec_file;
+
+    return `
+      <div class="card">
+        <div class="card-name">${escapeHtml(entry.name)}</div>
+        <div class="card-desc">${escapeHtml(entry.description || '')}</div>
+        <div class="badge-row">${badges}</div>
+        <div class="card-links">
+          <a href="${blobUrl}" target="_blank" rel="noopener">View source →</a>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function escapeHtml(s) {
+  const div = document.createElement('div');
+  div.textContent = s;
+  return div.innerHTML;
+}
+
+async function loadRegistry() {
+  try {
+    const res = await fetch('registry.json');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    registry = await res.json();
+  } catch (e) {
+    elGrid.innerHTML = `<div class="empty-state">Failed to load registry.json: ${escapeHtml(e.message)}</div>`;
+    return;
+  }
+  renderChips();
+  renderCards();
+}
+
+elSearch.addEventListener('input', renderCards);
+
+loadRegistry();
+</script>
+
+</body>
+</html>
