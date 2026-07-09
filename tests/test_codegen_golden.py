@@ -23,6 +23,7 @@ import pytest
 from openlattice.generators.fastapi_gen import generate as gen_fastapi
 from openlattice.generators.queue_gen import generate as gen_queues
 from openlattice.generators.sqlalchemy_gen import generate as gen_sqlalchemy
+from openlattice.generators.workflow_gen import generate as gen_workflows
 from openlattice.parser import parse_file, parse_string
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -100,6 +101,22 @@ def test_sqlalchemy_golden_deterministic() -> None:
     first = gen_sqlalchemy(spec)
     second = gen_sqlalchemy(spec)
     assert first == second, "SQLAlchemy generator is non-deterministic"
+
+
+def test_workflow_golden_ecommerce() -> None:
+    _snapshot(
+        REPO_ROOT / "examples" / "ecommerce" / "ecommerce.lattice",
+        gen_workflows,
+        Path("ecommerce_workflows.py"),
+    )
+
+
+def test_workflow_golden_deterministic() -> None:
+    """Generator must be pure: same spec in -> same bytes out, twice."""
+    spec = parse_file(str(REPO_ROOT / "examples" / "ecommerce" / "ecommerce.lattice"))
+    first = gen_workflows(spec)
+    second = gen_workflows(spec)
+    assert first == second, "Workflow generator is non-deterministic"
 
 
 def test_queue_golden_ecommerce() -> None:

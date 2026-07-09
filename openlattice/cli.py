@@ -9,6 +9,7 @@ from rich.text import Text
 from openlattice.generators.fastapi_gen import generate as gen_fastapi
 from openlattice.generators.queue_gen import generate as gen_queues
 from openlattice.generators.sqlalchemy_gen import generate as gen_sqlalchemy
+from openlattice.generators.workflow_gen import generate as gen_workflows
 from openlattice.ir import LatticeSpec
 from openlattice.parser import ParseError, parse_file
 from openlattice.state import (
@@ -22,8 +23,22 @@ from openlattice.state import (
     spec_resources,
 )
 
-console = Console()
+console = Console(width=120)
 STATE_FILE = ".lattice-state.json"
+
+
+def _resolve_state_file(output_dir: str | None, state_file: str | None) -> str:
+    """Resolve which state file path to use.
+
+    - If --state-file is given explicitly, always use it.
+    - Else if --output-dir is given explicitly, colocate the state file inside it.
+    - Else fall back to the repo-root default (unchanged legacy behavior).
+    """
+    if state_file is not None:
+        return state_file
+    if output_dir is not None:
+        return str(Path(output_dir) / ".lattice-state.json")
+    return STATE_FILE
 
 
 def _render_plan(diff: DiffResult, spec: LatticeSpec, state: StateFile) -> Text:
@@ -84,7 +99,21 @@ def cli():
 
 @cli.command()
 @click.argument("spec_file", type=click.Path(exists=True))
-def plan(spec_file: str):
+@click.option(
+    "--output-dir",
+    "-o",
+    "output_dir",
+    default=None,
+    help="Directory generated files would be written to (default: generated).",
+)
+@click.option(
+    "--state-file",
+    "state_file",
+    default=None,
+    help="Path to the state file (default: <output-dir>/.lattice-state.json when "
+    "--output-dir is given, else .lattice-state.json).",
+)
+def plan(spec_file: str, output_dir: str | None, state_file: str | None):
     """Show execution plan: what will be added, changed, or destroyed."""
     try:
         spec = parse_file(spec_file)
@@ -92,15 +121,20 @@ def plan(spec_file: str):
         console.print(f"[red]Parse error:[/red] {e}")
         raise SystemExit(1)
 
-    state = load_state(STATE_FILE)
+    resolved_state_file = _resolve_state_file(output_dir, state_file)
+    resolved_out_dir = Path(output_dir) if output_dir is not None else Path("generated")
+
+    state = load_state(resolved_state_file)
     diff = diff_spec_against_state(spec, state)
 
     content = Text()
     content.append(f"Spec: {spec_file}\n\n", style="dim")
     content.append(_render_plan(diff, spec, state))
     content.append("\n  Will generate:\n", style="dim")
-    content.append("    → generated/main.py        FastAPI app + routes\n", style="cyan")
-    content.append("    → generated/models.py      SQLAlchemy models\n", style="cyan")
+    content.append(
+        f"    → {resolved_out_dir / 'main.py'}        FastAPI app + routes\n", style="cyan"
+    )
+    content.append(f"    → {resolved_out_dir / 'models.py'}      SQLAlchemy models\n", style="cyan")
     if diff.to_add or diff.to_change or diff.to_destroy:
         content.append(
             f"\n  Run `openlattice apply {spec_file}` to perform these actions.", style="dim"
@@ -111,7 +145,21 @@ def plan(spec_file: str):
 
 @cli.command()
 @click.argument("spec_file", type=click.Path(exists=True))
-def apply(spec_file: str):
+@click.option(
+    "--output-dir",
+    "-o",
+    "output_dir",
+    default=None,
+    help="Directory to write generated files to (default: generated).",
+)
+@click.option(
+    "--state-file",
+    "state_file",
+    default=None,
+    help="Path to the state file (default: <output-dir>/.lattice-state.json when "
+    "--output-dir is given, else .lattice-state.json).",
+)
+def apply(spec_file: str, output_dir: str | None, state_file: str | None):
     """Apply spec: generate files and update state."""
     try:
         spec = parse_file(spec_file)
@@ -119,7 +167,9 @@ def apply(spec_file: str):
         console.print(f"[red]Parse error:[/red] {e}")
         raise SystemExit(1)
 
-    state = load_state(STATE_FILE)
+    resolved_state_file = _resolve_state_file(output_dir, state_file)
+
+    state = load_state(resolved_state_file)
     diff = diff_spec_against_state(spec, state)
 
     if not (diff.to_add or diff.to_change or diff.to_destroy):
@@ -128,13 +178,15 @@ def apply(spec_file: str):
 
     console.print(f"Applying OpenLattice spec: [bold]{spec_file}[/bold]\n")
 
-    out_dir = Path("generated")
-    out_dir.mkdir(exist_ok=True)
+    out_dir = Path(output_dir) if output_dir is not None else Path("generated")
+    out_dir.mkdir(exist_ok=True, parents=True)
 
     files = {
         out_dir / "main.py": gen_fastapi(spec),
         out_dir / "models.py": gen_sqlalchemy(spec),
     }
+    if spec.workflows:
+        files[out_dir / "workflows.py"] = gen_workflows(spec)
     if spec.queues:
         files[out_dir / "queues.py"] = gen_queues(spec)
     for path, content in files.items():
@@ -142,7 +194,7 @@ def apply(spec_file: str):
         console.print(f"  [green]✓[/green] {path}")
 
     new_state = build_new_state(spec, state)
-    save_state(new_state, STATE_FILE)
+    save_state(new_state, resolved_state_file)
     console.print(
         f"\nDone. [bold]{len(files)}[/bold] files written. State updated (serial={new_state.serial})."
     )
