@@ -1,0 +1,44 @@
+[
+  {
+    "name": "blog",
+    "spec_file": "examples/blog/blog.lattice",
+    "counts": {
+      "entities": 3,
+      "apis": 7,
+      "events": 1,
+      "workflows": 1,
+      "queues": 1,
+      "connectors": 0,
+      "agents": 0
+    },
+    "resource_types": [
+      "entities",
+      "apis",
+      "events",
+      "workflows",
+      "queues"
+    ],
+    "description": "Blog platform spec"
+  },
+  {
+    "name": "ecommerce",
+    "spec_file": "examples/ecommerce/ecommerce.lattice",
+    "counts": {
+      "entities": 3,
+      "apis": 6,
+      "events": 2,
+      "workflows": 1,
+      "queues": 2,
+      "connectors": 0,
+      "agents": 0
+    },
+    "resource_types": [
+      "entities",
+      "apis",
+      "events",
+      "workflows",
+      "queues"
+    ],
+    "description": "E-Commerce platform spec"
+  }
+]
